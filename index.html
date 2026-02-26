@@ -435,6 +435,26 @@ button,select,input,textarea{font-family:inherit}
 .tpl-name-input:focus{border-color:var(--accent,#60a5fa);outline:none}
 .templates-view{display:none}
 .templates-view.active{display:block}
+.pi-dash{padding:12px 0}
+.pi-controls{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.pi-period{padding:6px 12px;border-radius:6px;border:1px solid var(--border,#333);background:var(--surface2,#1e1e1e);color:var(--txt,#eee);cursor:pointer;font-size:13px}
+.pi-period.active{border-color:var(--accent,#60a5fa);background:rgba(96,165,250,.15)}
+.pi-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.pi-card{background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);border-radius:10px;padding:16px;text-align:center}
+.pi-card h3{font-size:24px;margin:4px 0;color:var(--accent,#60a5fa)}
+.pi-card small{font-size:11px;color:var(--dim,#888)}
+.pi-section{margin-bottom:24px}
+.pi-section h3{font-size:14px;margin-bottom:8px;color:var(--dim,#888);text-transform:uppercase;letter-spacing:1px}
+.pi-table{width:100%;border-collapse:collapse;font-size:13px}
+.pi-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border,#333);color:var(--dim,#888);font-weight:600}
+.pi-table td{padding:8px 10px;border-bottom:1px solid var(--border,#222)}
+.pi-table tr:hover td{background:rgba(255,255,255,.03)}
+.pi-green{color:#4ade80} .pi-yellow{color:#fbbf24} .pi-red{color:#f87171}
+.pi-bar{height:6px;border-radius:3px;background:var(--border,#333);overflow:hidden;min-width:60px}
+.pi-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.pi-export-btn{padding:8px 16px;border-radius:8px;border:none;background:var(--accent,#60a5fa);color:#000;font-weight:600;cursor:pointer;font-size:13px}
+.pi-empty{text-align:center;padding:40px;color:var(--dim,#888);font-size:14px}
+.process-view{display:none} .process-view.active{display:block}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -490,6 +510,7 @@ button,select,input,textarea{font-family:inherit}
       <div class="vtab active" onclick="setView('tasks',this)">Aufgaben</div>
       <div class="vtab" onclick="setView('docs',this)">Dokumente</div>
       <div class="vtab" onclick="setView('templates',this)">⚙️ Templates</div>
+<div class="vtab" onclick="setView('process',this)">📊 Analytics</div>
     </div>
 
     <div class="filters-bar" id="filtersBar">
@@ -521,6 +542,7 @@ button,select,input,textarea{font-family:inherit}
       <div class="tasks-view active" id="tasksView"></div>
       <div class="docs-view" id="docsView"></div>
     <div class="templates-view" id="templatesView"></div>
+<div class="process-view" id="processView"></div>
     </div>
     </div><!-- /client-view -->
   </div>
@@ -1511,6 +1533,164 @@ async function migrateDefaultTemplates(){
   else{ console.warn("Migration error",r.status); tplCache=[]; }
 }
 }
+
+// === M5: Process Intelligence Dashboard ===
+let piPeriod = "all";
+
+function calcProcessMetrics(){
+  const proj = A();
+  if(!proj) return null;
+  const now = Date.now();
+  const periodMs = piPeriod==="month" ? 30*86400000 : piPeriod==="quarter" ? 90*86400000 : 0;
+  const cutoff = periodMs ? now - periodMs : 0;
+  let totalTasks=0, totalPlan=0, totalIst=0, tasksNoTime=0;
+  const overPlan=[], underPlan=[], noTime=[], owners={};
+  (proj.phases||[]).forEach((ph,pi)=>{
+    (ph.packages||[]).forEach((pk,pki)=>{
+      (pk.tasks||[]).forEach((tk,ti)=>{
+        const plan = tk.min||0;
+        let ist = 0;
+        if(tk.timeLog && tk.timeLog.length){
+          tk.timeLog.forEach(e=>{
+            if(!e.start) return;
+            const s = new Date(e.start).getTime();
+            const en = e.end ? new Date(e.end).getTime() : now;
+            if(cutoff && s < cutoff) return;
+            ist += (en - s)/60000;
+          });
+        }
+        ist = Math.round(ist);
+        totalTasks++;
+        totalPlan += plan;
+        totalIst += ist;
+        const info = {task:tk.t, phase:ph.name||("Phase "+(pi+1)), package:pk.name||"", plan, ist, owner:tk.owner||"–", path:pi+"_"+pki+"_"+ti};
+        if(ist===0 && plan>0){ tasksNoTime++; noTime.push(info); }
+        else if(ist > plan && plan>0){ overPlan.push({...info, diff:ist-plan, pct:Math.round(ist/plan*100)}); }
+        else if(ist>0 && ist<=plan){ underPlan.push({...info, diff:plan-ist, pct:Math.round(ist/plan*100)}); }
+        if(tk.owner){
+          if(!owners[tk.owner]) owners[tk.owner]={name:tk.owner, plan:0, ist:0, tasks:0};
+          owners[tk.owner].plan += plan;
+          owners[tk.owner].ist += ist;
+          owners[tk.owner].tasks++;
+        }
+      });
+    });
+  });
+  overPlan.sort((a,b)=>b.diff-a.diff);
+  underPlan.sort((a,b)=>b.diff-a.diff);
+  const ownerList = Object.values(owners).sort((a,b)=>b.ist-a.ist);
+  const efficiency = totalPlan>0 ? Math.round(totalIst/totalPlan*100) : 0;
+  return {totalTasks, totalPlan, totalIst, efficiency, tasksNoTime, overPlan, underPlan, noTime, ownerList, projName:proj.name||"Projekt"};
+}
+
+function piColorClass(pct){
+  if(pct<=100) return "pi-green";
+  if(pct<=130) return "pi-yellow";
+  return "pi-red";
+}
+
+function piBar(ist, plan){
+  if(!plan) return "";
+  const pct = Math.min(Math.round(ist/plan*100),200);
+  const color = pct<=100?"#4ade80":pct<=130?"#fbbf24":"#f87171";
+  return '<div class="pi-bar"><div class="pi-bar-fill" style="width:'+Math.min(pct,100)+'%;background:'+color+'"></div></div>';
+}
+
+function renderProcessDashboard(){
+  const el = document.getElementById("processView");
+  if(!el) return;
+  const m = calcProcessMetrics();
+  if(!m){ el.innerHTML='<div class="pi-empty">Kein aktives Projekt ausgewählt.</div>'; return; }
+  let h = '<div class="pi-dash">';
+  h += '<div class="pi-controls">';
+  h += '<span style="font-weight:600;font-size:15px">📊 Process Intelligence – '+m.projName+'</span>';
+  ["all","month","quarter"].forEach(p=>{
+    const label = p==="all"?"Gesamt":p==="month"?"Letzter Monat":"Letztes Quartal";
+    h += '<button class="pi-period' + (piPeriod===p?" active":"") + '" onclick="piPeriod=\''+p+'\';renderProcessDashboard()">'+label+'</button>';
+  });
+  h += '<button class="pi-export-btn" onclick="exportProcessReport()">📋 Export</button>';
+  h += '</div>';
+  // KPI cards
+  h += '<div class="pi-cards">';
+  h += '<div class="pi-card"><small>Tasks gesamt</small><h3>'+m.totalTasks+'</h3></div>';
+  h += '<div class="pi-card"><small>Plan (min)</small><h3>'+m.totalPlan+'</h3></div>';
+  h += '<div class="pi-card"><small>Ist (min)</small><h3>'+m.totalIst+'</h3></div>';
+  const effColor = m.efficiency<=100?"#4ade80":m.efficiency<=130?"#fbbf24":"#f87171";
+  h += '<div class="pi-card"><small>Effizienz</small><h3 style="color:'+effColor+'">'+m.efficiency+'%</h3></div>';
+  h += '<div class="pi-card"><small>Ohne Zeiterfassung</small><h3 style="color:#fbbf24">'+m.tasksNoTime+'</h3></div>';
+  h += '</div>';
+  // Tables
+  if(m.overPlan.length){
+    h += '<div class="pi-section"><h3>⚠️ Über-Plan Tasks</h3>';
+    h += '<table class="pi-table"><tr><th>Task</th><th>Phase</th><th>Owner</th><th>Plan</th><th>Ist</th><th>Diff</th><th>%</th><th></th></tr>';
+    m.overPlan.forEach(t=>{
+      h += '<tr><td>'+t.task+'</td><td>'+t.phase+'</td><td>'+t.owner+'</td><td>'+t.plan+'</td><td class="'+piColorClass(t.pct)+'">'+t.ist+'</td><td class="pi-red">+'+t.diff+'</td><td class="'+piColorClass(t.pct)+'">'+t.pct+'%</td><td>'+piBar(t.ist,t.plan)+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  if(m.underPlan.length){
+    h += '<div class="pi-section"><h3>✅ Effiziente Tasks</h3>';
+    h += '<table class="pi-table"><tr><th>Task</th><th>Phase</th><th>Owner</th><th>Plan</th><th>Ist</th><th>Gespart</th><th>%</th><th></th></tr>';
+    m.underPlan.forEach(t=>{
+      h += '<tr><td>'+t.task+'</td><td>'+t.phase+'</td><td>'+t.owner+'</td><td>'+t.plan+'</td><td class="pi-green">'+t.ist+'</td><td class="pi-green">-'+t.diff+'</td><td class="pi-green">'+t.pct+'%</td><td>'+piBar(t.ist,t.plan)+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  if(m.ownerList.length){
+    h += '<div class="pi-section"><h3>👥 Mitarbeiter-Auslastung</h3>';
+    h += '<table class="pi-table"><tr><th>Mitarbeiter</th><th>Tasks</th><th>Plan (min)</th><th>Ist (min)</th><th>Effizienz</th><th></th></tr>';
+    m.ownerList.forEach(o=>{
+      const eff = o.plan>0?Math.round(o.ist/o.plan*100):0;
+      h += '<tr><td>'+o.name+'</td><td>'+o.tasks+'</td><td>'+o.plan+'</td><td>'+o.ist+'</td><td class="'+piColorClass(eff)+'">'+eff+'%</td><td>'+piBar(o.ist,o.plan)+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  if(m.noTime.length){
+    h += '<div class="pi-section"><h3>⏱️ Tasks ohne Zeiterfassung</h3>';
+    h += '<table class="pi-table"><tr><th>Task</th><th>Phase</th><th>Owner</th><th>Plan (min)</th></tr>';
+    m.noTime.slice(0,20).forEach(t=>{
+      h += '<tr><td>'+t.task+'</td><td>'+t.phase+'</td><td>'+t.owner+'</td><td>'+t.plan+'</td></tr>';
+    });
+    if(m.noTime.length>20) h += '<tr><td colspan="4" style="color:var(--dim)">... und '+(m.noTime.length-20)+' weitere</td></tr>';
+    h += '</table></div>';
+  }
+  if(!m.overPlan.length && !m.underPlan.length && !m.noTime.length){
+    h += '<div class="pi-empty">Noch keine Zeiterfassungsdaten vorhanden.<br>Starte den Timer bei einzelnen Tasks um Daten zu sammeln.</div>';
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function exportProcessReport(){
+  const m = calcProcessMetrics();
+  if(!m) return;
+  let txt = "PROCESS INTELLIGENCE REPORT\n";
+  txt += "Projekt: "+m.projName+"\n";
+  txt += "Zeitraum: "+(piPeriod==="all"?"Gesamt":piPeriod==="month"?"Letzter Monat":"Letztes Quartal")+"\n";
+  txt += "================================\n\n";
+  txt += "Tasks gesamt: "+m.totalTasks+"\n";
+  txt += "Plan: "+m.totalPlan+" min | Ist: "+m.totalIst+" min\n";
+  txt += "Effizienz: "+m.efficiency+"%\n";
+  txt += "Ohne Zeiterfassung: "+m.tasksNoTime+"\n\n";
+  if(m.overPlan.length){
+    txt += "ÜBER-PLAN TASKS:\n";
+    m.overPlan.forEach(t=>{ txt += "  "+t.task+" ("+t.owner+"): Plan "+t.plan+" / Ist "+t.ist+" = "+t.pct+"%\n"; });
+    txt += "\n";
+  }
+  if(m.underPlan.length){
+    txt += "EFFIZIENTE TASKS:\n";
+    m.underPlan.forEach(t=>{ txt += "  "+t.task+" ("+t.owner+"): Plan "+t.plan+" / Ist "+t.ist+" = "+t.pct+"%\n"; });
+    txt += "\n";
+  }
+  if(m.ownerList.length){
+    txt += "MITARBEITER:\n";
+    m.ownerList.forEach(o=>{ const eff=o.plan>0?Math.round(o.ist/o.plan*100):0; txt += "  "+o.name+": "+o.tasks+" Tasks, Plan "+o.plan+" / Ist "+o.ist+" = "+eff+"%\n"; });
+    txt += "\n";
+  }
+  try{ navigator.clipboard.writeText(txt).then(()=>alert("Report in Zwischenablage kopiert!")); }
+  catch(e){ const w=window.open("","_blank"); if(w){ w.document.write("<pre>"+txt+"</pre>"); } }
+}
+
 
 // esc helper if not already defined
 
@@ -2794,11 +2974,13 @@ function setView(v,tab){
   document.getElementById('tasksView').classList.toggle('active',v==='tasks');
   document.getElementById('docsView').classList.toggle('active',v==='docs');
   document.getElementById('templatesView').classList.toggle('active',v==='templates');
+  document.getElementById('processView').classList.toggle('active',v==='process');
   const showTask=v==='tasks';
   document.getElementById('filtersBar').style.display=showTask?'':'none';
   document.getElementById('statsRow').style.display=showTask?'':'none';
   document.getElementById('progressBar').style.display=showTask?'':'none';
   if(v==='templates') renderTemplates();
+  if(v==='process') renderProcessDashboard();
 }
 
 function toggleCV(){
