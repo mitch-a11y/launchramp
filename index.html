@@ -1361,9 +1361,9 @@ function renderTemplateEditor(tpl){
       for(let ti=0;ti<tasks.length;ti++){
         const tk=tasks[ti];
         h+="<div class=\"tpl-task\">";
-        h+="<input value=\""+esc(tk.name||tk.task||"")+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'name',this.value)\" placeholder=\"Task-Name\" />";
+        h+="<input value=\""+esc(tk.t||tk.name||tk.task||"")+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'name',this.value)\" placeholder=\"Task-Name\" />";
         h+="<input value=\""+esc(tk.owner||"")+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'owner',this.value)\" placeholder=\"Owner\" style=\"text-align:center\" />";
-        h+="<input type=\"number\" value=\""+(tk.planzeit||tk.plan||0)+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'planzeit',+this.value)\" style=\"text-align:center\" title=\"Planzeit (min)\" />";
+        h+="<input type=\"number\" value=\""+(tk.min||tk.planzeit||tk.plan||0)+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'planzeit',+this.value)\" style=\"text-align:center\" title=\"Planzeit (min)\" />";
         h+="<button class=\"tpl-del\" onclick=\"tplDelTask('"+tpl.id+"',"+pi+","+ki+","+ti+")\" title=\"Task löschen\">✕</button>";
         h+="</div>";
       }
@@ -1406,9 +1406,9 @@ function tplEditPkg(id,pi,ki,val){
 function tplEditTask(id,pi,ki,ti,field,val){
   const t=tplGetTpl(id); if(!t) return;
   const tk=t.data.phases[pi].packages[ki].tasks[ti];
-  if(field==="name"){ tk.name=val; tk.task=val; }
+  if(field==="name"){ tk.t=val; tk.name=val; tk.task=val; }
   else if(field==="owner"){ tk.owner=val; }
-  else if(field==="planzeit"){ tk.planzeit=val; tk.plan=val; }
+  else if(field==="planzeit"){ tk.min=val; tk.planzeit=val; tk.plan=val; }
   saveTemplate(t);
 }
 
@@ -1429,7 +1429,7 @@ function tplAddPkg(id,pi){
 function tplAddTask(id,pi,ki){
   const t=tplGetTpl(id); if(!t) return;
   if(!t.data.phases[pi].packages[ki].tasks) t.data.phases[pi].packages[ki].tasks=[];
-  t.data.phases[pi].packages[ki].tasks.push({name:"Neuer Task",task:"Neuer Task",owner:"",planzeit:0,plan:0});
+  t.data.phases[pi].packages[ki].tasks.push({t:"Neuer Task",name:"Neuer Task",task:"Neuer Task",owner:"",min:0,planzeit:0,plan:0});
   saveTemplate(t); renderTemplates();
 }
 
@@ -1465,17 +1465,17 @@ async function migrateDefaultTemplates(){
   const defData=defaultPhases();
   // Convert to template format: phases[{name,packages:[{name,tasks:[{name,owner,planzeit}]}]}]
   const launchPhases=defData.map(p=>({
-    name:p.phase||p.name,
-    phase:p.phase||p.name,
+    name:p.name||p.phase||"",
+    phase:p.name||p.phase||"",
     packages:(p.packages||[]).map(pk=>({
-      name:pk.package||pk.name,
-      package:pk.package||pk.name,
+      name:pk.name||pk.package||"",
+      package:pk.name||pk.package||"",
       tasks:(pk.tasks||[]).map(tk=>({
-        name:tk.task||tk.name,
-        task:tk.task||tk.name,
+        name:tk.t||tk.task||tk.name||"",
+        task:tk.t||tk.task||tk.name||"",
         owner:tk.owner||"",
-        planzeit:tk.planzeit||tk.plan||0,
-        plan:tk.planzeit||tk.plan||0
+        planzeit:tk.min||tk.planzeit||tk.plan||0,
+        plan:tk.min||tk.planzeit||tk.plan||0
       }))
     }))
   }));
@@ -1484,20 +1484,23 @@ async function migrateDefaultTemplates(){
   const templates=[launchTpl];
   if(typeof RETAINER_CATEGORIES!=="undefined"){
     for(const cat of RETAINER_CATEGORIES){
-      const catPhases=[{name:cat.category||cat.name,phase:cat.category||cat.name,packages:(cat.packages||[]).map(pk=>({
-        name:pk.package||pk.name,
-        package:pk.package||pk.name,
-        tasks:(pk.tasks||[]).map(tk=>({
-          name:tk.task||tk.name,
-          task:tk.task||tk.name,
-          owner:tk.owner||"",
-          planzeit:tk.planzeit||tk.plan||0,
-          plan:tk.planzeit||tk.plan||0
+      const catPhases=(cat.phases||[]).map(cp=>({
+        name:cp.name||cp.phase||"",
+        phase:cp.name||cp.phase||"",
+        packages:(cp.packages||[]).map(pk=>({
+          name:pk.package||pk.name||"",
+          package:pk.package||pk.name||"",
+          tasks:(pk.tasks||[]).map(tk=>({
+            name:tk.t||tk.task||tk.name||"",
+            task:tk.t||tk.task||tk.name||"",
+            owner:tk.owner||"",
+            planzeit:tk.min||tk.planzeit||tk.plan||0,
+            plan:tk.min||tk.planzeit||tk.plan||0
+          }))
         }))
-      }))}];
-      templates.push({id:"retainer_"+cat.category.toLowerCase().replace(/[^a-z0-9]/g,"_"),name:"Retainer: "+cat.category,type:"retainer_category",data:{phases:catPhases},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:"System"});
+      }));
+      templates.push({id:"retainer_"+(cat.id||cat.name.toLowerCase().replace(/[^a-z0-9]/g,"_")),name:"Retainer: "+cat.name,type:"retainer_category",data:{phases:catPhases},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:"System"});
     }
-  }
   // Batch insert
   const r=await fetch(SUPABASE_URL+"/rest/v1/templates",{
     method:"POST",
