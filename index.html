@@ -2410,7 +2410,7 @@ function renderTasks(){
         const sopBtn=sLink
           ?`<span class="link-btn has-link" onclick="window.open('${esc(sLink)}','_blank')" title="${esc(sLink)}">🎬 SOP <span class="gear" onclick="event.stopPropagation();editTaskLink(${pi},${pai},${ti},'sop')">⚙</span></span>`
           :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'sop')">🎬 SOP</span>`;
-        h+=`<div class="task-row ${(!c.states[key]&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
+        h+=`<div class="task-row ${(!c.states[id]&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
           <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
