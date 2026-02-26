@@ -542,6 +542,7 @@ let sbClient = null;
 let isOnline = true;
 let syncInProgress = false;
 let lastRemoteUpdate = null;
+let lastKnownRemote = null; // Baseline for conflict detection
 
 // Initialize Supabase
 try {
@@ -817,15 +818,150 @@ function save(){localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()}
 
 
 // ============================================================
-// SUPABASE SYNC FUNCTIONS
+// SUPABASE SYNC FUNCTIONS (with Field-Level Merge)
 // ============================================================
+
+// ---------- MERGE UTILITIES ----------
+function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+function mergeStates(localStates, remoteStates, baseStates){
+  // Merge task states key-by-key. Both local and remote changes win over base.
+  // If both changed same key differently, remote wins.
+  const merged = Object.assign({}, baseStates);
+  // Apply remote changes
+  Object.keys(remoteStates).forEach(k => { merged[k] = remoteStates[k]; });
+  // Apply local changes (only if local changed from base AND remote didn't also change it)
+  Object.keys(localStates).forEach(k => {
+    const localChanged = localStates[k] !== (baseStates[k] || '');
+    const remoteChanged = remoteStates[k] !== (baseStates[k] || '');
+    if(localChanged && !remoteChanged) merged[k] = localStates[k];
+    // If both changed: remote already wins from above
+  });
+  return merged;
+}
+
+function mergeClients(localClients, remoteClients, baseClients){
+  // Build maps by client ID
+  const baseMap = {};  (baseClients||[]).forEach(c => baseMap[c.id] = c);
+  const localMap = {}; (localClients||[]).forEach(c => localMap[c.id] = c);
+  const remoteMap = {};(remoteClients||[]).forEach(c => remoteMap[c.id] = c);
+  const allIds = new Set([...Object.keys(localMap), ...Object.keys(remoteMap)]);
+  const merged = [];
+
+  allIds.forEach(id => {
+    const base = baseMap[id];
+    const local = localMap[id];
+    const remote = remoteMap[id];
+
+    if(!local && remote && base){
+      // Local deleted this client, remote still has it -> respect local delete
+      return;
+    }
+    if(local && !remote && base){
+      // Remote deleted this client -> respect remote delete
+      return;
+    }
+    if(local && !remote && !base){
+      // New local client -> keep
+      merged.push(deepClone(local));
+      return;
+    }
+    if(!local && remote && !base){
+      // New remote client -> keep
+      merged.push(deepClone(remote));
+      return;
+    }
+    if(!local && !remote) return;
+
+    // Both have this client -> merge projects
+    const mergedClient = deepClone(remote || local);
+    if(local && remote){
+      mergedClient.projects = mergeProjects(
+        local.projects || [],
+        remote.projects || [],
+        base ? base.projects || [] : []
+      );
+      // Keep remote name if changed, else local
+      if(base && local.name !== base.name && remote.name === base.name) mergedClient.name = local.name;
+    }
+    merged.push(mergedClient);
+  });
+
+  return merged;
+}
+
+function mergeProjects(localProjects, remoteProjects, baseProjects){
+  const baseMap = {};  (baseProjects||[]).forEach(p => baseMap[p.id] = p);
+  const localMap = {}; (localProjects||[]).forEach(p => localMap[p.id] = p);
+  const remoteMap = {};(remoteProjects||[]).forEach(p => remoteMap[p.id] = p);
+  const allIds = new Set([...Object.keys(localMap), ...Object.keys(remoteMap)]);
+  const merged = [];
+
+  allIds.forEach(id => {
+    const base = baseMap[id];
+    const local = localMap[id];
+    const remote = remoteMap[id];
+
+    if(!local && remote && base) return; // local deleted
+    if(local && !remote && base) return; // remote deleted
+    if(local && !remote && !base){ merged.push(deepClone(local)); return; } // new local
+    if(!local && remote && !base){ merged.push(deepClone(remote)); return; } // new remote
+    if(!local && !remote) return;
+
+    // Both have project -> merge states and timeLog
+    const mergedProj = deepClone(remote);
+    if(local && remote && base){
+      // Merge states (most important!)
+      mergedProj.states = mergeStates(local.states||{}, remote.states||{}, base.states||{});
+      // Merge timeLog (append unique entries)
+      const remoteLogSet = new Set((remote.timeLog||[]).map(e => e.start));
+      const baseLogSet = new Set((base.timeLog||[]).map(e => e.start));
+      (local.timeLog||[]).forEach(entry => {
+        if(!remoteLogSet.has(entry.start) && !baseLogSet.has(entry.start)){
+          mergedProj.timeLog.push(entry); // new local entry
+        }
+      });
+      // Merge quickLinks
+      if(local.quickLinks && base.quickLinks){
+        Object.keys(local.quickLinks).forEach(k => {
+          if(local.quickLinks[k] !== (base.quickLinks[k]||'') && remote.quickLinks[k] === (base.quickLinks[k]||'')){
+            mergedProj.quickLinks[k] = local.quickLinks[k];
+          }
+        });
+      }
+      // Merge docLinks
+      if(local.docLinks && base.docLinks){
+        Object.keys(local.docLinks).forEach(k => {
+          if(local.docLinks[k] !== (base.docLinks[k]||'') && (remote.docLinks||{})[k] === (base.docLinks[k]||'')){
+            if(!mergedProj.docLinks) mergedProj.docLinks = {};
+            mergedProj.docLinks[k] = local.docLinks[k];
+          }
+        });
+      }
+      // Keep local project name if locally changed
+      if(local.name !== base.name && remote.name === base.name) mergedProj.name = local.name;
+      // Keep local dates if locally changed
+      if(local.startDate !== base.startDate && remote.startDate === base.startDate) mergedProj.startDate = local.startDate;
+      if(local.launchDate !== base.launchDate && remote.launchDate === base.launchDate) mergedProj.launchDate = local.launchDate;
+      // Keep local completed if locally changed
+      if(local.completed !== base.completed && remote.completed === base.completed) mergedProj.completed = local.completed;
+    } else if(local && remote){
+      // No base - remote wins but keep local states
+      mergedProj.states = Object.assign({}, remote.states||{}, local.states||{});
+    }
+    merged.push(mergedProj);
+  });
+
+  return merged;
+}
+
+// ---------- LOAD FROM SUPABASE ----------
 async function loadFromSupabase(){
-  if(!supabase){updateSyncStatus('offline');return}
+  if(!sbClient){updateSyncStatus('offline');return}
   try{
     const{data,error}=await sbClient.from('app_state').select('data,updated_at').eq('id','main').single();
     if(error){console.warn('[Supabase] Load error:',error);updateSyncStatus('error');return}
     if(data&&data.data&&data.data.clients&&data.data.clients.length>0){
-      // Remote has data - check if it's different from local
       const remoteStr=JSON.stringify(data.data);
       const localStr=JSON.stringify({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
       if(remoteStr!==localStr){
@@ -834,7 +970,7 @@ async function loadFromSupabase(){
         DB.clients=data.data.clients||[];
         DB.activeClient=data.data.activeClient||null;
         DB.activeProject=data.data.activeProject||null;
-        // Re-run migrations on remote data
+        // Run migrations
         DB.clients.forEach(c=>{
           if(!c.projects)c.projects=[];
           c.projects.forEach(proj=>{
@@ -852,10 +988,12 @@ async function loadFromSupabase(){
         if(DB.activeClient)expandedClients.add(DB.activeClient);
         renderAll();
       }
+      // Store baseline for future merge
+      lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
     } else if(DB.clients.length>0){
-      // Remote is empty but local has data - push local to remote
       console.log('[Supabase] Remote empty, pushing local data');
-      await saveToSupabase();
+      lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+      await saveToSupabaseDirect();
     }
     isOnline=true;
     updateSyncStatus('synced');
@@ -863,61 +1001,102 @@ async function loadFromSupabase(){
   }catch(e){console.warn('[Supabase] Load failed:',e);updateSyncStatus('error')}
 }
 
+// ---------- SAVE TO SUPABASE (with merge) ----------
 let saveTimeout=null;
 function saveToSupabase(){
-  if(!supabase||syncInProgress)return;
-  // Debounce: wait 500ms after last save before pushing
+  if(!sbClient||syncInProgress)return;
   clearTimeout(saveTimeout);
   saveTimeout=setTimeout(async()=>{
     syncInProgress=true;
     updateSyncStatus('syncing');
     try{
-      const payload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
-      const{error}=await sbClient.from('app_state').update({data:payload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
+      const localPayload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
+
+      if(lastKnownRemote){
+        // Fetch current remote state
+        const{data:currentRemote,error:fetchErr}=await sbClient.from('app_state').select('data').eq('id','main').single();
+        if(!fetchErr && currentRemote && currentRemote.data){
+          const remoteStr=JSON.stringify(currentRemote.data);
+          const baseStr=JSON.stringify(lastKnownRemote);
+          if(remoteStr!==baseStr){
+            // Remote changed since we last loaded -> MERGE
+            console.log('[Supabase] Conflict detected, merging...');
+            const mergedClients = mergeClients(localPayload.clients, currentRemote.data.clients||[], lastKnownRemote.clients||[]);
+            localPayload.clients = mergedClients;
+            // Update local DB with merged data
+            DB.clients = mergedClients;
+            localStorage.setItem('lr3',JSON.stringify(DB));
+            renderAll();
+            toast('Merge: Deine und Remote-Aenderungen zusammengefuehrt');
+          }
+        }
+      }
+
+      // Now save the (possibly merged) payload
+      const{error}=await sbClient.from('app_state').update({data:localPayload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
       if(error){console.warn('[Supabase] Save error:',error);updateSyncStatus('error')}
-      else{console.log('[Supabase] Saved');updateSyncStatus('synced');lastRemoteUpdate=new Date().toISOString()}
+      else{
+        console.log('[Supabase] Saved');
+        updateSyncStatus('synced');
+        lastRemoteUpdate=new Date().toISOString();
+        lastKnownRemote=deepClone(localPayload);
+      }
     }catch(e){console.warn('[Supabase] Save failed:',e);updateSyncStatus('error')}
     syncInProgress=false;
   },500);
 }
 
-let realtimeChannel=null;
-function setupRealtimeSubscription(){
-  if(!supabase||realtimeChannel)return;
-  realtimeChannel=sbClient.channel('app_state_changes')
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{
-      if(syncInProgress)return; // Ignore own changes
-      console.log('[Supabase] Realtime update received');
-      const newData=payload.new.data;
-      if(newData&&newData.clients){
-        const remoteStr=JSON.stringify(newData);
-        const localStr=JSON.stringify({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
-        if(remoteStr!==localStr){
-          DB.clients=newData.clients||[];
-          // Keep local activeClient/activeProject to not disrupt current view
-          // But update the data underneath
-          localStorage.setItem('lr3',JSON.stringify(DB));
-          renderAll();
-          toast('Daten von Teamkollege aktualisiert');
-          updateSyncStatus('synced');
-        }
-      }
-    })
-    .subscribe((status)=>{
-      console.log('[Supabase] Realtime status:',status);
-      if(status==='SUBSCRIBED')updateSyncStatus('synced');
-    });
+// Direct save without merge (for initial push)
+async function saveToSupabaseDirect(){
+  if(!sbClient)return;
+  const payload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
+  await sbClient.from('app_state').upsert({id:'main',data:payload,updated_by:navigator.userAgent.substring(0,50)});
+  lastKnownRemote=deepClone(payload);
 }
 
+// ---------- REALTIME SUBSCRIPTION ----------
+let realtimeChannel=null;
+function setupRealtimeSubscription(){
+  if(!sbClient||realtimeChannel)return;
+  realtimeChannel=sbClient.channel('app_state_changes')
+  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{
+    if(syncInProgress)return;
+    console.log('[Supabase] Realtime update received');
+    const newData=payload.new.data;
+    if(newData&&newData.clients){
+      // Merge instead of overwrite
+      if(lastKnownRemote){
+        const localPayload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
+        const localStr=JSON.stringify(localPayload);
+        const remoteStr=JSON.stringify(newData);
+        if(localStr===remoteStr) return; // No difference
+
+        const mergedClients=mergeClients(localPayload.clients, newData.clients, lastKnownRemote.clients||[]);
+        DB.clients=mergedClients;
+      } else {
+        DB.clients=newData.clients||[];
+      }
+      lastKnownRemote=deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+      localStorage.setItem('lr3',JSON.stringify(DB));
+      renderAll();
+      toast('Daten von Teamkollege aktualisiert');
+      updateSyncStatus('synced');
+    }
+  })
+  .subscribe((status)=>{
+    console.log('[Supabase] Realtime status:',status);
+    if(status==='SUBSCRIBED')updateSyncStatus('synced');
+  });
+}
+
+// ---------- SYNC STATUS INDICATOR ----------
 function updateSyncStatus(status){
   const el=document.getElementById('syncStatus');
   if(!el)return;
-  const icons={synced:'\u2601\ufe0f',syncing:'\u21bb',error:'\u26a0\ufe0f',offline:'\u274c'};
-  const labels={synced:'Sync OK',syncing:'Syncing...',error:'Sync Fehler',offline:'Offline'};
-  const colors={synced:'var(--green)',syncing:'var(--accent)',error:'var(--red)',offline:'var(--muted)'};
-  el.innerHTML=icons[status]||'';
-  el.title=labels[status]||status;
-  el.style.color=colors[status]||'';
+  const icons={synced:'\u2601\uFE0F',syncing:'\uD83D\uDD04',error:'\u274C',offline:'\uD83D\uDCF4'};
+  const tips={synced:'Synchronisiert',syncing:'Synchronisiere...',error:'Sync-Fehler',offline:'Offline-Modus'};
+  el.textContent=icons[status]||'\u2601\uFE0F';
+  el.title=tips[status]||status;
 }
 
 
