@@ -1510,6 +1510,7 @@ async function migrateDefaultTemplates(){
   if(r.ok){ tplCache=templates; console.log("Migrated",templates.length,"templates"); }
   else{ console.warn("Migration error",r.status); tplCache=[]; }
 }
+}
 
 // esc helper if not already defined
 
