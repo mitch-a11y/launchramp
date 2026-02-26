@@ -538,14 +538,14 @@ button,select,input,textarea{font-family:inherit}
 // ============================================================
 const SUPABASE_URL = 'https://pezpisgwkemvdclnhdsw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlenBpc2d3a2VtdmRjbG5oZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMDE0MTAsImV4cCI6MjA4NzY3NzQxMH0.wzMrpKGri1ueWVOOhBYZPUxut8-s13vBrPpNUAywM9U';
-let supabase = null;
+let sbClient = null;
 let isOnline = true;
 let syncInProgress = false;
 let lastRemoteUpdate = null;
 
 // Initialize Supabase
 try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   console.log('[LaunchRamp] Supabase connected');
 } catch(e) {
   console.warn('[LaunchRamp] Supabase init failed, using localStorage only:', e);
@@ -822,7 +822,7 @@ function save(){localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()}
 async function loadFromSupabase(){
   if(!supabase){updateSyncStatus('offline');return}
   try{
-    const{data,error}=await supabase.from('app_state').select('data,updated_at').eq('id','main').single();
+    const{data,error}=await sbClient.from('app_state').select('data,updated_at').eq('id','main').single();
     if(error){console.warn('[Supabase] Load error:',error);updateSyncStatus('error');return}
     if(data&&data.data&&data.data.clients&&data.data.clients.length>0){
       // Remote has data - check if it's different from local
@@ -873,7 +873,7 @@ function saveToSupabase(){
     updateSyncStatus('syncing');
     try{
       const payload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
-      const{error}=await supabase.from('app_state').update({data:payload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
+      const{error}=await sbClient.from('app_state').update({data:payload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
       if(error){console.warn('[Supabase] Save error:',error);updateSyncStatus('error')}
       else{console.log('[Supabase] Saved');updateSyncStatus('synced');lastRemoteUpdate=new Date().toISOString()}
     }catch(e){console.warn('[Supabase] Save failed:',e);updateSyncStatus('error')}
@@ -884,7 +884,7 @@ function saveToSupabase(){
 let realtimeChannel=null;
 function setupRealtimeSubscription(){
   if(!supabase||realtimeChannel)return;
-  realtimeChannel=supabase.channel('app_state_changes')
+  realtimeChannel=sbClient.channel('app_state_changes')
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{
       if(syncInProgress)return; // Ignore own changes
       console.log('[Supabase] Realtime update received');
