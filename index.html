@@ -381,11 +381,32 @@ button,select,input,textarea{font-family:inherit}
 .plan-bar-label{white-space:nowrap}
 .pkg-time{font-size:10px;color:#999;margin-left:8px;font-weight:400}
 .phase-time{font-size:10px;color:#999;margin-left:8px;font-weight:400}
+/* M3: Activity Feed */
+.activity-badge{position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;pointer-events:none}
+.activity-panel{position:fixed;top:0;right:-340px;width:340px;height:100vh;background:var(--surface,#141414);border-left:1px solid var(--border,#333);z-index:10000;transition:right 0.3s ease;display:flex;flex-direction:column;box-shadow:-4px 0 20px rgba(0,0,0,0.3)}
+.activity-panel.open{right:0}
+.activity-panel-header{padding:16px;border-bottom:1px solid var(--border,#333);display:flex;justify-content:space-between;align-items:center}
+.activity-panel-header h3{margin:0;font-size:15px;color:var(--text,#e0e0e0)}
+.activity-panel-close{background:none;border:none;color:var(--text-dim,#888);font-size:20px;cursor:pointer;padding:4px 8px}
+.activity-panel-close:hover{color:var(--text,#e0e0e0)}
+.activity-list{flex:1;overflow-y:auto;padding:8px}
+.activity-item{padding:10px 12px;border-bottom:1px solid var(--border,#222);font-size:13px;line-height:1.4;animation:actFadeIn 0.3s ease}
+.activity-item:last-child{border-bottom:none}
+.activity-item .act-time{color:var(--text-dim,#666);font-size:11px;margin-bottom:2px}
+.activity-item .act-actor{color:var(--accent,#00b894);font-weight:600}
+.activity-item .act-action{color:var(--text,#ccc)}
+.activity-empty{padding:40px 20px;text-align:center;color:var(--text-dim,#666);font-size:13px}
+@keyframes actFadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.sync-wrap{position:relative;display:inline-block}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="syncStatus" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-size:14px;padding:4px 10px;border-radius:8px;background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);cursor:help;opacity:0.7;transition:opacity 0.2s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Sync Status"></div>
+<div class="sync-wrap" onclick="toggleActivityPanel()"><div id="syncStatus" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-size:14px;padding:4px 10px;border-radius:8px;background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);cursor:pointer;opacity:0.7;transition:opacity 0.2s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Klick für Activity Feed"><span id="actBadge" class="activity-badge" style="display:none">0</span></div></div>
+<div id="activityPanel" class="activity-panel">
+  <div class="activity-panel-header"><h3>📋 Activity Feed</h3><button class="activity-panel-close" onclick="toggleActivityPanel()">✕</button></div>
+  <div id="activityList" class="activity-list"><div class="activity-empty">Keine Aktivitäten</div></div>
+</div>
 
 <div class="app">
   <div class="sidebar" id="sidebar">
@@ -1008,6 +1029,8 @@ async function loadFromSupabase(){
     isOnline=true;
     updateSyncStatus('synced');
     setupRealtimeSubscription();
+    setupActivitySubscription();
+    ensureActor();
   }catch(e){console.warn('[Supabase] Load failed:',e);updateSyncStatus('error')}
 }
 
@@ -1063,6 +1086,99 @@ async function saveToSupabaseDirect(){
   await sbClient.from('app_state').upsert({id:'main',data:payload,updated_by:navigator.userAgent.substring(0,50)});
   lastKnownRemote=deepClone(payload);
 }
+
+// ===== M3: ACTIVITY FEED =====
+let actUser = localStorage.getItem("lr3_user");
+let actCount = 0;
+let actItems = [];
+let actPanelOpen = false;
+let actAutoCloseTimer = null;
+
+function ensureActor(){
+  if(!actUser){
+    const name = prompt("Wer bist du? (Name für Activity Feed)");
+    if(name && name.trim()){ actUser = name.trim(); localStorage.setItem("lr3_user", actUser); }
+    else { actUser = "Anonym"; localStorage.setItem("lr3_user", actUser); }
+  }
+  return actUser;
+}
+
+async function logActivity(action, detail){
+  const actor = ensureActor();
+  const payload = { action, detail: detail || {}, actor, created_at: new Date().toISOString() };
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/activity_log", {
+      method: "POST", headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+    if(!r.ok) console.warn("Activity log failed:", r.status);
+  } catch(e){ console.warn("Activity log error:", e); }
+}
+
+function toggleActivityPanel(){
+  actPanelOpen = !actPanelOpen;
+  const panel = document.getElementById("activityPanel");
+  if(panel){ panel.classList.toggle("open", actPanelOpen); }
+  if(actPanelOpen){
+    actCount = 0; updateActBadge();
+    loadActivities();
+    if(actAutoCloseTimer) clearTimeout(actAutoCloseTimer);
+    actAutoCloseTimer = setTimeout(function(){ if(actPanelOpen){ toggleActivityPanel(); } }, 10000);
+  } else {
+    if(actAutoCloseTimer){ clearTimeout(actAutoCloseTimer); actAutoCloseTimer = null; }
+  }
+}
+
+function updateActBadge(){
+  const badge = document.getElementById("actBadge");
+  if(!badge) return;
+  if(actCount > 0){ badge.style.display = "flex"; badge.textContent = actCount > 9 ? "9+" : actCount; }
+  else { badge.style.display = "none"; }
+}
+
+async function loadActivities(){
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/activity_log?order=created_at.desc&limit=30", {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
+    });
+    if(r.ok){ actItems = await r.json(); renderActivityList(); }
+  } catch(e){ console.warn("Load activities error:", e); }
+}
+
+function renderActivityList(){
+  const list = document.getElementById("activityList");
+  if(!list) return;
+  if(!actItems.length){ list.innerHTML = '<div class="activity-empty">Keine Aktivitäten bisher</div>'; return; }
+  list.innerHTML = actItems.map(function(it){
+    const d = new Date(it.created_at);
+    const time = d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
+    const det = it.detail || {};
+    let desc = it.action;
+    if(it.action === "status_change") desc = "Status: " + (det.task||"?") + " → " + (det.newStatus||"?");
+    else if(it.action === "timer_start") desc = "Timer gestartet: " + (det.task||"?");
+    else if(it.action === "timer_stop") desc = "Timer gestoppt: " + (det.task||"?") + " (" + (det.duration||"?") + ")";
+    else if(it.action === "project_created") desc = "Neues Projekt: " + (det.name||"?");
+    else if(it.action === "client_created") desc = "Neuer Kunde: " + (det.name||"?");
+    else if(it.action === "doc_linked") desc = "Dokument verlinkt: " + (det.name||"?");
+    return '<div class="activity-item"><div class="act-time">' + time + '</div><span class="act-actor">' + (it.actor||"?") + '</span> <span class="act-action">' + desc + '</span></div>';
+  }).join("");
+}
+
+function setupActivitySubscription(){
+  if(!sbClient) return;
+  sbClient.channel("activity-feed").on("postgres_changes",{event:"INSERT",schema:"public",table:"activity_log"},function(payload){
+    const newItem = payload.new;
+    if(newItem.actor !== actUser){
+      actCount++;
+      updateActBadge();
+    }
+    actItems.unshift(newItem);
+    if(actItems.length > 30) actItems.pop();
+    if(actPanelOpen) renderActivityList();
+  }).subscribe();
+}
+// ===== END M3: ACTIVITY FEED =====
+
 
 // ---------- REALTIME SUBSCRIPTION ----------
 let realtimeChannel=null;
@@ -1917,8 +2033,8 @@ function editDeadline(pi,pai,ti,evt){
 }
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
-function cycle(id){const c=A(),cur=c.states[id]||'Offen';c.states[id]=SC[(SC.indexOf(cur)+1)%SC.length];save();renderAll()}
-function setSt(id,v){A().states[id]=v;save();renderAll()}
+function cycle(id){const c=A(),cur=c.states[id]||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];c.states[id]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+function setSt(id,v){const old=A().states[id]||"Offen";A().states[id]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
 function setOwner(pi,pai,ti,sel){const c=A();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
 
 // ============================================================
@@ -2672,6 +2788,7 @@ function toggleTimer(taskId,evt){
     if(timerInterval){clearInterval(timerInterval);timerInterval=null}
     save();renderTasks();applyFilters();
     toast(`Timer gestoppt: ${elapsed}m erfasst`);
+    logActivity("timer_stop",{task:taskId,duration:elapsed+"m"});
   }else{
     // Stop any running timer first
     if(c.activeTimer){
@@ -2682,6 +2799,7 @@ function toggleTimer(taskId,evt){
       }
     }
     c.activeTimer={taskId,startTime:Date.now()};
+    logActivity("timer_start",{task:taskId});
     if(timerInterval)clearInterval(timerInterval);
     timerInterval=setInterval(()=>{
       // Update running timer display
