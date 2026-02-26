@@ -398,6 +398,43 @@ button,select,input,textarea{font-family:inherit}
 .activity-empty{padding:40px 20px;text-align:center;color:var(--text-dim,#666);font-size:13px}
 @keyframes actFadeIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
 .sync-wrap{position:relative;display:inline-block}
+/* M4: Template Settings */
+.tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:12px 0}
+.tpl-card{background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.2s}
+.tpl-card:hover{border-color:var(--accent,#60a5fa)}
+.tpl-card.active{border-color:var(--accent,#60a5fa);box-shadow:0 0 0 1px var(--accent,#60a5fa)}
+.tpl-card h4{margin:0 0 4px;font-size:14px}
+.tpl-card .tpl-type{font-size:11px;opacity:0.5;text-transform:uppercase;letter-spacing:0.5px}
+.tpl-card .tpl-stats{font-size:12px;opacity:0.6;margin-top:8px}
+.tpl-editor{margin-top:16px}
+.tpl-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tpl-toolbar button{padding:4px 12px;border-radius:6px;border:1px solid var(--border,#333);background:var(--surface2,#1e1e1e);color:inherit;cursor:pointer;font-size:12px}
+.tpl-toolbar button:hover{border-color:var(--accent,#60a5fa)}
+.tpl-toolbar button.danger{color:#e74c3c}
+.tpl-toolbar button.danger:hover{border-color:#e74c3c}
+.tpl-phase{background:var(--surface,#141414);border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.tpl-phase-header{display:flex;align-items:center;padding:10px 12px;cursor:pointer;gap:8px;font-weight:600;font-size:13px}
+.tpl-phase-header:hover{background:var(--surface2,#1e1e1e)}
+.tpl-phase-header .arrow{transition:transform 0.2s;font-size:10px}
+.tpl-phase-header .arrow.open{transform:rotate(90deg)}
+.tpl-phase-body{display:none;padding:0 12px 12px}
+.tpl-phase-body.open{display:block}
+.tpl-pkg{margin:8px 0;padding:8px;background:var(--surface2,#1e1e1e);border-radius:6px;border:1px solid var(--border,#222)}
+.tpl-pkg-header{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;margin-bottom:6px}
+.tpl-task{display:grid;grid-template-columns:1fr 90px 70px 28px;gap:4px;align-items:center;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.tpl-task:last-child{border-bottom:none}
+.tpl-task input,.tpl-task select{background:transparent;border:1px solid transparent;color:inherit;font-size:12px;padding:2px 4px;border-radius:4px}
+.tpl-task input:hover,.tpl-task input:focus{border-color:var(--border,#333);background:var(--surface,#141414)}
+.tpl-task input:focus{border-color:var(--accent,#60a5fa);outline:none}
+.tpl-add-btn{font-size:11px;opacity:0.5;cursor:pointer;padding:2px 6px;border:1px dashed var(--border,#333);border-radius:4px;background:none;color:inherit;margin-top:4px}
+.tpl-add-btn:hover{opacity:1;border-color:var(--accent,#60a5fa)}
+.tpl-del{font-size:11px;cursor:pointer;opacity:0.3;color:#e74c3c;background:none;border:none;padding:2px}
+.tpl-del:hover{opacity:1}
+.tpl-name-input{font-size:16px;font-weight:700;background:transparent;border:1px solid transparent;color:inherit;padding:4px 8px;border-radius:6px;width:100%;max-width:400px}
+.tpl-name-input:hover,.tpl-name-input:focus{border-color:var(--border,#333);background:var(--surface,#141414)}
+.tpl-name-input:focus{border-color:var(--accent,#60a5fa);outline:none}
+.templates-view{display:none}
+.templates-view.active{display:block}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -452,6 +489,7 @@ button,select,input,textarea{font-family:inherit}
     <div class="view-tabs">
       <div class="vtab active" onclick="setView('tasks',this)">Aufgaben</div>
       <div class="vtab" onclick="setView('docs',this)">Dokumente</div>
+      <div class="vtab" onclick="setView('templates',this)">⚙️ Templates</div>
     </div>
 
     <div class="filters-bar" id="filtersBar">
@@ -482,6 +520,7 @@ button,select,input,textarea{font-family:inherit}
     <div class="content" id="content">
       <div class="tasks-view active" id="tasksView"></div>
       <div class="docs-view" id="docsView"></div>
+    <div class="templates-view" id="templatesView"></div>
     </div>
     </div><!-- /client-view -->
   </div>
@@ -1180,6 +1219,296 @@ function setupActivitySubscription(){
   }).subscribe();
 }
 // ===== END M3: ACTIVITY FEED =====
+
+// ============================================================
+// M4: TEMPLATE SETTINGS PANEL
+// ============================================================
+let tplCache = null;
+let tplActive = null;
+
+async function loadTemplates(){
+  try{
+    const r=await fetch(SUPABASE_URL+"/rest/v1/templates?select=*&order=type,name",{
+      headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
+    });
+    if(r.ok){ tplCache=await r.json(); }
+    else{ console.warn("loadTemplates error",r.status); tplCache=[]; }
+  }catch(e){ console.warn("loadTemplates fetch error",e); tplCache=[]; }
+  return tplCache;
+}
+
+async function saveTemplate(tpl){
+  tpl.updated_at=new Date().toISOString();
+  const r=await fetch(SUPABASE_URL+"/rest/v1/templates?id=eq."+encodeURIComponent(tpl.id),{
+    method:"PATCH",
+    headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({name:tpl.name,data:tpl.data,updated_at:tpl.updated_at})
+  });
+  if(!r.ok) console.warn("saveTemplate error",r.status);
+  else logActivity("template_edit",{template:tpl.name});
+}
+
+async function createTemplate(name,type){
+  const id=type+"_"+Date.now();
+  const tpl={id,name,type,data:{phases:[]},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:actUser||"Anonym"};
+  const r=await fetch(SUPABASE_URL+"/rest/v1/templates",{
+    method:"POST",
+    headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify(tpl)
+  });
+  if(r.ok){
+    tplCache.push(tpl);
+    tplActive=tpl.id;
+    logActivity("template_create",{template:name});
+    renderTemplates();
+  }
+}
+
+async function duplicateTemplate(srcId){
+  const src=tplCache.find(t=>t.id===srcId);
+  if(!src) return;
+  const name=prompt("Name für die Kopie:",src.name+" (Kopie)");
+  if(!name) return;
+  const id=src.type+"_"+Date.now();
+  const tpl={id,name,type:src.type,data:JSON.parse(JSON.stringify(src.data)),created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:actUser||"Anonym"};
+  const r=await fetch(SUPABASE_URL+"/rest/v1/templates",{
+    method:"POST",
+    headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify(tpl)
+  });
+  if(r.ok){
+    tplCache.push(tpl);
+    tplActive=tpl.id;
+    logActivity("template_duplicate",{source:src.name,newName:name});
+    renderTemplates();
+  }
+}
+
+async function deleteTemplate(id){
+  const tpl=tplCache.find(t=>t.id===id);
+  if(!tpl||!confirm("Template \""+tpl.name+"\" wirklich löschen?")) return;
+  await fetch(SUPABASE_URL+"/rest/v1/templates?id=eq."+encodeURIComponent(id),{
+    method:"DELETE",
+    headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
+  });
+  tplCache=tplCache.filter(t=>t.id!==id);
+  if(tplActive===id) tplActive=null;
+  logActivity("template_delete",{template:tpl.name});
+  renderTemplates();
+}
+
+async function renderTemplates(){
+  if(!tplCache) await loadTemplates();
+  const el=document.getElementById("templatesView");
+  if(!el) return;
+  // If no templates yet, migrate defaults
+  if(tplCache.length===0){ await migrateDefaultTemplates(); }
+  let h="<div style=\"padding:8px\">";
+  h+="<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px\">";
+  h+="<h3 style=\"margin:0;font-size:16px\">📋 Template-Verwaltung</h3>";
+  h+="<button class=\"tpl-add-btn\" onclick=\"newTemplateDialog()\" style=\"font-size:13px;padding:6px 14px\">＋ Neues Template</button>";
+  h+="</div>";
+  // Template cards grid
+  h+="<div class=\"tpl-grid\">";
+  const types={launch:"🚀 Launch",retainer_category:"🔄 Retainer",webinar:"📺 Webinar",custom:"⚡ Custom"};
+  for(const tpl of tplCache){
+    const phases=tpl.data&&tpl.data.phases?tpl.data.phases:[];
+    const taskCount=phases.reduce((s,p)=>s+(p.packages||[]).reduce((s2,pk)=>s2+(pk.tasks||[]).length,0),0);
+    const isActive=tplActive===tpl.id;
+    h+="<div class=\"tpl-card"+(isActive?" active":"")+"\" onclick=\"tplActive='"+tpl.id+"';renderTemplates()\">";
+    h+="<h4>"+esc(tpl.name)+"</h4>";
+    h+="<div class=\"tpl-type\">"+(types[tpl.type]||tpl.type)+"</div>";
+    h+="<div class=\"tpl-stats\">"+phases.length+" Phasen · "+taskCount+" Tasks</div>";
+    h+="</div>";
+  }
+  h+="</div>";
+  // If a template is active, show editor
+  if(tplActive){
+    const tpl=tplCache.find(t=>t.id===tplActive);
+    if(tpl) h+=renderTemplateEditor(tpl);
+  }
+  h+="</div>";
+  el.innerHTML=h;
+}
+
+function renderTemplateEditor(tpl){
+  let h="<div class=\"tpl-editor\">";
+  h+="<div class=\"tpl-toolbar\">";
+  h+="<input class=\"tpl-name-input\" value=\""+esc(tpl.name)+"\" onchange=\"tplRename('"+tpl.id+"',this.value)\" />";
+  h+="<button onclick=\"duplicateTemplate('"+tpl.id+"')\" title=\"Duplizieren\">📋 Duplizieren</button>";
+  h+="<button onclick=\"tplAddPhase('"+tpl.id+"')\" title=\"Phase hinzufügen\">＋ Phase</button>";
+  h+="<button class=\"danger\" onclick=\"deleteTemplate('"+tpl.id+"')\" title=\"Löschen\">🗑 Löschen</button>";
+  h+="</div>";
+  const phases=tpl.data&&tpl.data.phases?tpl.data.phases:[];
+  for(let pi=0;pi<phases.length;pi++){
+    const ph=phases[pi];
+    h+="<div class=\"tpl-phase\">";
+    h+="<div class=\"tpl-phase-header\" onclick=\"tplTogglePhase(this)\">";
+    h+="<span class=\"arrow\">▶</span>";
+    h+="<input value=\""+esc(ph.name||ph.phase||"")+"\" onclick=\"event.stopPropagation()\" onchange=\"tplEditPhase('"+tpl.id+"',"+pi+",this.value)\" style=\"flex:1;background:transparent;border:1px solid transparent;color:inherit;font-weight:600;font-size:13px;padding:2px 4px;border-radius:4px\" />";
+    h+="<button class=\"tpl-del\" onclick=\"event.stopPropagation();tplDelPhase('"+tpl.id+"',"+pi+")\" title=\"Phase löschen\">✕</button>";
+    h+="</div>";
+    h+="<div class=\"tpl-phase-body\">";
+    const pkgs=ph.packages||[];
+    for(let ki=0;ki<pkgs.length;ki++){
+      const pk=pkgs[ki];
+      h+="<div class=\"tpl-pkg\">";
+      h+="<div class=\"tpl-pkg-header\">";
+      h+="<input value=\""+esc(pk.name||pk.package||"")+"\" onchange=\"tplEditPkg('"+tpl.id+"',"+pi+","+ki+",this.value)\" style=\"flex:1;background:transparent;border:1px solid transparent;color:inherit;font-weight:600;font-size:12px;padding:2px 4px;border-radius:4px\" />";
+      h+="<button class=\"tpl-del\" onclick=\"tplDelPkg('"+tpl.id+"',"+pi+","+ki+")\" title=\"Package löschen\">✕</button>";
+      h+="</div>";
+      const tasks=pk.tasks||[];
+      for(let ti=0;ti<tasks.length;ti++){
+        const tk=tasks[ti];
+        h+="<div class=\"tpl-task\">";
+        h+="<input value=\""+esc(tk.name||tk.task||"")+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'name',this.value)\" placeholder=\"Task-Name\" />";
+        h+="<input value=\""+esc(tk.owner||"")+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'owner',this.value)\" placeholder=\"Owner\" style=\"text-align:center\" />";
+        h+="<input type=\"number\" value=\""+(tk.planzeit||tk.plan||0)+"\" onchange=\"tplEditTask('"+tpl.id+"',"+pi+","+ki+","+ti+",'planzeit',+this.value)\" style=\"text-align:center\" title=\"Planzeit (min)\" />";
+        h+="<button class=\"tpl-del\" onclick=\"tplDelTask('"+tpl.id+"',"+pi+","+ki+","+ti+")\" title=\"Task löschen\">✕</button>";
+        h+="</div>";
+      }
+      h+="<button class=\"tpl-add-btn\" onclick=\"tplAddTask('"+tpl.id+"',"+pi+","+ki+")\" >＋ Task</button>";
+      h+="</div>";
+    }
+    h+="<button class=\"tpl-add-btn\" onclick=\"tplAddPkg('"+tpl.id+"',"+pi+")\" style=\"margin-top:4px\">＋ Package</button>";
+    h+="</div></div>";
+  }
+  h+="</div>";
+  return h;
+}
+
+function tplTogglePhase(el){
+  const arrow=el.querySelector(".arrow");
+  const body=el.nextElementSibling;
+  if(body){ body.classList.toggle("open"); }
+  if(arrow){ arrow.classList.toggle("open"); }
+}
+
+function tplGetTpl(id){ return tplCache.find(t=>t.id===id); }
+
+function tplRename(id,val){
+  const t=tplGetTpl(id); if(!t) return;
+  t.name=val; saveTemplate(t);
+}
+
+function tplEditPhase(id,pi,val){
+  const t=tplGetTpl(id); if(!t) return;
+  t.data.phases[pi].name=val; t.data.phases[pi].phase=val;
+  saveTemplate(t);
+}
+
+function tplEditPkg(id,pi,ki,val){
+  const t=tplGetTpl(id); if(!t) return;
+  t.data.phases[pi].packages[ki].name=val; t.data.phases[pi].packages[ki].package=val;
+  saveTemplate(t);
+}
+
+function tplEditTask(id,pi,ki,ti,field,val){
+  const t=tplGetTpl(id); if(!t) return;
+  const tk=t.data.phases[pi].packages[ki].tasks[ti];
+  if(field==="name"){ tk.name=val; tk.task=val; }
+  else if(field==="owner"){ tk.owner=val; }
+  else if(field==="planzeit"){ tk.planzeit=val; tk.plan=val; }
+  saveTemplate(t);
+}
+
+function tplAddPhase(id){
+  const t=tplGetTpl(id); if(!t) return;
+  if(!t.data.phases) t.data.phases=[];
+  t.data.phases.push({name:"Neue Phase",phase:"Neue Phase",packages:[]});
+  saveTemplate(t); renderTemplates();
+}
+
+function tplAddPkg(id,pi){
+  const t=tplGetTpl(id); if(!t) return;
+  if(!t.data.phases[pi].packages) t.data.phases[pi].packages=[];
+  t.data.phases[pi].packages.push({name:"Neues Package",package:"Neues Package",tasks:[]});
+  saveTemplate(t); renderTemplates();
+}
+
+function tplAddTask(id,pi,ki){
+  const t=tplGetTpl(id); if(!t) return;
+  if(!t.data.phases[pi].packages[ki].tasks) t.data.phases[pi].packages[ki].tasks=[];
+  t.data.phases[pi].packages[ki].tasks.push({name:"Neuer Task",task:"Neuer Task",owner:"",planzeit:0,plan:0});
+  saveTemplate(t); renderTemplates();
+}
+
+function tplDelPhase(id,pi){
+  const t=tplGetTpl(id); if(!t) return;
+  if(!confirm("Phase \""+t.data.phases[pi].name+"\" löschen?")) return;
+  t.data.phases.splice(pi,1);
+  saveTemplate(t); renderTemplates();
+}
+
+function tplDelPkg(id,pi,ki){
+  const t=tplGetTpl(id); if(!t) return;
+  t.data.phases[pi].packages.splice(ki,1);
+  saveTemplate(t); renderTemplates();
+}
+
+function tplDelTask(id,pi,ki,ti){
+  const t=tplGetTpl(id); if(!t) return;
+  t.data.phases[pi].packages[ki].tasks.splice(ti,1);
+  saveTemplate(t); renderTemplates();
+}
+
+function newTemplateDialog(){
+  const name=prompt("Template-Name:");
+  if(!name) return;
+  const type=prompt("Typ (launch/retainer_category/webinar/custom):","custom");
+  if(!type) return;
+  createTemplate(name,type);
+}
+
+async function migrateDefaultTemplates(){
+  // Migrate hardcoded defaultPhases into Supabase template
+  const defData=defaultPhases();
+  // Convert to template format: phases[{name,packages:[{name,tasks:[{name,owner,planzeit}]}]}]
+  const launchPhases=defData.map(p=>({
+    name:p.phase||p.name,
+    phase:p.phase||p.name,
+    packages:(p.packages||[]).map(pk=>({
+      name:pk.package||pk.name,
+      package:pk.package||pk.name,
+      tasks:(pk.tasks||[]).map(tk=>({
+        name:tk.task||tk.name,
+        task:tk.task||tk.name,
+        owner:tk.owner||"",
+        planzeit:tk.planzeit||tk.plan||0,
+        plan:tk.planzeit||tk.plan||0
+      }))
+    }))
+  }));
+  const launchTpl={id:"launch_default",name:"Launch (Standard)",type:"launch",data:{phases:launchPhases},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:"System"};
+  // Migrate RETAINER_CATEGORIES
+  const templates=[launchTpl];
+  if(typeof RETAINER_CATEGORIES!=="undefined"){
+    for(const cat of RETAINER_CATEGORIES){
+      const catPhases=[{name:cat.category||cat.name,phase:cat.category||cat.name,packages:(cat.packages||[]).map(pk=>({
+        name:pk.package||pk.name,
+        package:pk.package||pk.name,
+        tasks:(pk.tasks||[]).map(tk=>({
+          name:tk.task||tk.name,
+          task:tk.task||tk.name,
+          owner:tk.owner||"",
+          planzeit:tk.planzeit||tk.plan||0,
+          plan:tk.planzeit||tk.plan||0
+        }))
+      }))}];
+      templates.push({id:"retainer_"+cat.category.toLowerCase().replace(/[^a-z0-9]/g,"_"),name:"Retainer: "+cat.category,type:"retainer_category",data:{phases:catPhases},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:"System"});
+    }
+  }
+  // Batch insert
+  const r=await fetch(SUPABASE_URL+"/rest/v1/templates",{
+    method:"POST",
+    headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify(templates)
+  });
+  if(r.ok){ tplCache=templates; console.log("Migrated",templates.length,"templates"); }
+  else{ console.warn("Migration error",r.status); tplCache=[]; }
+}
+
+// esc helper if not already defined
 
 
 // ---------- REALTIME SUBSCRIPTION ----------
@@ -2457,13 +2786,15 @@ function openDocLink(id){const u=A().docLinks[id];if(u)window.open(u,'_blank');e
 function setView(v,tab){
   curView=v;
   document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
+  if(tab) tab.classList.add('active');
   document.getElementById('tasksView').classList.toggle('active',v==='tasks');
   document.getElementById('docsView').classList.toggle('active',v==='docs');
-  const show=v==='tasks';
-  document.getElementById('filtersBar').style.display=show?'':'none';
-  document.getElementById('statsRow').style.display=show?'':'none';
-  document.getElementById('progressBar').style.display=show?'':'none';
+  document.getElementById('templatesView').classList.toggle('active',v==='templates');
+  const showTask=v==='tasks';
+  document.getElementById('filtersBar').style.display=showTask?'':'none';
+  document.getElementById('statsRow').style.display=showTask?'':'none';
+  document.getElementById('progressBar').style.display=showTask?'':'none';
+  if(v==='templates') renderTemplates();
 }
 
 function toggleCV(){
