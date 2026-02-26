@@ -372,8 +372,10 @@ button,select,input,textarea{font-family:inherit}
 .main-area .client-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
 .main-area .client-view.hidden{display:none}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<div id="syncStatus" style="position:fixed;bottom:12px;right:12px;z-index:9999;font-size:14px;padding:4px 10px;border-radius:8px;background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);cursor:help;opacity:0.7;transition:opacity 0.2s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Sync Status"></div>
 
 <div class="app">
   <div class="sidebar" id="sidebar">
@@ -530,6 +532,26 @@ button,select,input,textarea{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
+
+// ============================================================
+// SUPABASE CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://pezpisgwkemvdclnhdsw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlenBpc2d3a2VtdmRjbG5oZHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxMDE0MTAsImV4cCI6MjA4NzY3NzQxMH0.wzMrpKGri1ueWVOOhBYZPUxut8-s13vBrPpNUAywM9U';
+let supabase = null;
+let isOnline = true;
+let syncInProgress = false;
+let lastRemoteUpdate = null;
+
+// Initialize Supabase
+try {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('[LaunchRamp] Supabase connected');
+} catch(e) {
+  console.warn('[LaunchRamp] Supabase init failed, using localStorage only:', e);
+  isOnline = false;
+}
+
 // ============================================================
 // DATA
 // ============================================================
@@ -752,35 +774,28 @@ const RETAINER_CATEGORIES=[
   ]}]}]}
 ];
 
-function load(){try{DB=JSON.parse(localStorage.getItem('lr3')||'null')||{clients:[],activeClient:null,activeProject:null}}catch(e){DB={clients:[],activeClient:null,activeProject:null}}
-  // Migration v1→v2: flat clients → clients with projects[]
+function load(){
+  // Phase 1: Load from localStorage for instant display
+  try{DB=JSON.parse(localStorage.getItem('lr3')||'null')||{clients:[],activeClient:null,activeProject:null}}catch(e){DB={clients:[],activeClient:null,activeProject:null}}
+  // Run all existing migrations (keep original migration logic)
   if(DB.clients.length&&!DB.clients[0].projects){
     DB.clients.forEach(c=>{
       const proj={id:'p'+Date.now()+'_'+Math.random().toString(36).substr(2,4),name:c.name+' Launch',type:'launch',
-        phases:c.phases||[],states:c.states||{},docLinks:c.docLinks||{},jfNotes:c.jfNotes||'',
-        quickLinks:c.quickLinks||{homepage:'',instagram:'',linkedin:'',gdrive:'',claude:''},
-        timeLog:c.timeLog||[],activeTimer:c.activeTimer||null,
-        startDate:c.startDate||new Date().toISOString().split('T')[0],launchDate:c.launchDate||futDate(60),
-        completed:false};
+      phases:c.phases||[],states:c.states||{},docLinks:c.docLinks||{},jfNotes:c.jfNotes||'',
+      quickLinks:c.quickLinks||{homepage:'',instagram:'',linkedin:'',gdrive:'',claude:''},
+      timeLog:c.timeLog||[],activeTimer:c.activeTimer||null,
+      startDate:c.startDate||new Date().toISOString().split('T')[0],launchDate:c.launchDate||futDate(60),
+      completed:false};
       c.projects=[proj];
-      // Clean old flat fields from client
       delete c.phases;delete c.states;delete c.docLinks;delete c.jfNotes;
       delete c.quickLinks;delete c.timeLog;delete c.activeTimer;
       delete c.startDate;delete c.launchDate;
     });
-    // Set active project
-    if(DB.activeClient){
-      const ac=DB.clients.find(c=>c.id===DB.activeClient);
-      if(ac&&ac.projects.length)DB.activeProject=ac.projects[0].id;
-    }
+    if(DB.activeClient){const ac=DB.clients.find(c=>c.id===DB.activeClient);if(ac&&ac.projects.length)DB.activeProject=ac.projects[0].id;}
     save();
   }
   if(!DB.activeProject)DB.activeProject=null;
-  if(!DB.clients.length){
-    const c=mkClientWithProject('Beispiel-Kunde','launch');
-    DB.clients.push(c);DB.activeClient=c.id;DB.activeProject=c.projects[0].id;
-  }
-  // Migration: ensure project-level fields
+  if(!DB.clients.length){const c=mkClientWithProject('Beispiel-Kunde','launch');DB.clients.push(c);DB.activeClient=c.id;DB.activeProject=c.projects[0].id;}
   DB.clients.forEach(c=>{
     if(!c.projects)c.projects=[];
     c.projects.forEach(proj=>{
@@ -794,10 +809,117 @@ function load(){try{DB=JSON.parse(localStorage.getItem('lr3')||'null')||{clients
       proj.phases.forEach(p=>{if(!p.startDate)p.startDate='';if(!p.endDate)p.endDate=''});
     });
   });
-  // Expand active client in sidebar
   if(DB.activeClient)expandedClients.add(DB.activeClient);
+  // Phase 2: Async load from Supabase (overrides localStorage if newer)
+  loadFromSupabase();
 }
-function save(){localStorage.setItem('lr3',JSON.stringify(DB))}
+function save(){localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()}
+
+
+// ============================================================
+// SUPABASE SYNC FUNCTIONS
+// ============================================================
+async function loadFromSupabase(){
+  if(!supabase){updateSyncStatus('offline');return}
+  try{
+    const{data,error}=await supabase.from('app_state').select('data,updated_at').eq('id','main').single();
+    if(error){console.warn('[Supabase] Load error:',error);updateSyncStatus('error');return}
+    if(data&&data.data&&data.data.clients&&data.data.clients.length>0){
+      // Remote has data - check if it's different from local
+      const remoteStr=JSON.stringify(data.data);
+      const localStr=JSON.stringify({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+      if(remoteStr!==localStr){
+        console.log('[Supabase] Remote data loaded, updating local');
+        lastRemoteUpdate=data.updated_at;
+        DB.clients=data.data.clients||[];
+        DB.activeClient=data.data.activeClient||null;
+        DB.activeProject=data.data.activeProject||null;
+        // Re-run migrations on remote data
+        DB.clients.forEach(c=>{
+          if(!c.projects)c.projects=[];
+          c.projects.forEach(proj=>{
+            if(!proj.startDate)proj.startDate=proj.phases[0]?.startDate||new Date().toISOString().split('T')[0];
+            if(!proj.quickLinks)proj.quickLinks={homepage:'',instagram:'',linkedin:'',gdrive:'',claude:''};
+            if(!proj.jourfix)proj.jourfix={};
+            if(!proj.timeLog)proj.timeLog=[];
+            if(!proj.activeTimer)proj.activeTimer=null;
+            if(proj.completed===undefined)proj.completed=false;
+            proj.phases.forEach(p=>{if(!p.startDate)p.startDate='';if(!p.endDate)p.endDate=''});
+          });
+        });
+        if(!DB.clients.length){const c=mkClientWithProject('Beispiel-Kunde','launch');DB.clients.push(c);DB.activeClient=c.id;DB.activeProject=c.projects[0].id;}
+        localStorage.setItem('lr3',JSON.stringify(DB));
+        if(DB.activeClient)expandedClients.add(DB.activeClient);
+        renderAll();
+      }
+    } else if(DB.clients.length>0){
+      // Remote is empty but local has data - push local to remote
+      console.log('[Supabase] Remote empty, pushing local data');
+      await saveToSupabase();
+    }
+    isOnline=true;
+    updateSyncStatus('synced');
+    setupRealtimeSubscription();
+  }catch(e){console.warn('[Supabase] Load failed:',e);updateSyncStatus('error')}
+}
+
+let saveTimeout=null;
+function saveToSupabase(){
+  if(!supabase||syncInProgress)return;
+  // Debounce: wait 500ms after last save before pushing
+  clearTimeout(saveTimeout);
+  saveTimeout=setTimeout(async()=>{
+    syncInProgress=true;
+    updateSyncStatus('syncing');
+    try{
+      const payload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
+      const{error}=await supabase.from('app_state').update({data:payload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
+      if(error){console.warn('[Supabase] Save error:',error);updateSyncStatus('error')}
+      else{console.log('[Supabase] Saved');updateSyncStatus('synced');lastRemoteUpdate=new Date().toISOString()}
+    }catch(e){console.warn('[Supabase] Save failed:',e);updateSyncStatus('error')}
+    syncInProgress=false;
+  },500);
+}
+
+let realtimeChannel=null;
+function setupRealtimeSubscription(){
+  if(!supabase||realtimeChannel)return;
+  realtimeChannel=supabase.channel('app_state_changes')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{
+      if(syncInProgress)return; // Ignore own changes
+      console.log('[Supabase] Realtime update received');
+      const newData=payload.new.data;
+      if(newData&&newData.clients){
+        const remoteStr=JSON.stringify(newData);
+        const localStr=JSON.stringify({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+        if(remoteStr!==localStr){
+          DB.clients=newData.clients||[];
+          // Keep local activeClient/activeProject to not disrupt current view
+          // But update the data underneath
+          localStorage.setItem('lr3',JSON.stringify(DB));
+          renderAll();
+          toast('Daten von Teamkollege aktualisiert');
+          updateSyncStatus('synced');
+        }
+      }
+    })
+    .subscribe((status)=>{
+      console.log('[Supabase] Realtime status:',status);
+      if(status==='SUBSCRIBED')updateSyncStatus('synced');
+    });
+}
+
+function updateSyncStatus(status){
+  const el=document.getElementById('syncStatus');
+  if(!el)return;
+  const icons={synced:'\u2601\ufe0f',syncing:'\u21bb',error:'\u26a0\ufe0f',offline:'\u274c'};
+  const labels={synced:'Sync OK',syncing:'Syncing...',error:'Sync Fehler',offline:'Offline'};
+  const colors={synced:'var(--green)',syncing:'var(--accent)',error:'var(--red)',offline:'var(--muted)'};
+  el.innerHTML=icons[status]||'';
+  el.title=labels[status]||status;
+  el.style.color=colors[status]||'';
+}
+
 
 function mkProject(name,tpl,categories){
   const id='p'+Date.now()+'_'+Math.random().toString(36).substr(2,4);
