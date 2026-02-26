@@ -371,6 +371,16 @@ button,select,input,textarea{font-family:inherit}
 .dash-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
 .main-area .client-view{display:flex;flex-direction:column;flex:1;overflow:hidden}
 .main-area .client-view.hidden{display:none}
+/* Plan vs Ist Progress Bar */
+.plan-bar{display:inline-flex;align-items:center;gap:4px;margin-left:6px;font-size:10px;color:#888;cursor:default}
+.plan-bar-track{width:48px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden;position:relative}
+.plan-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.plan-bar-fill.green{background:#4caf50}
+.plan-bar-fill.yellow{background:#ff9800}
+.plan-bar-fill.red{background:#f44336}
+.plan-bar-label{white-space:nowrap}
+.pkg-time{font-size:10px;color:#999;margin-left:8px;font-weight:400}
+.phase-time{font-size:10px;color:#999;margin-left:8px;font-weight:400}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1597,6 +1607,9 @@ function renderTasks(){
     let tt=0,dd=0;
     phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')dd++}));
     const pct=tt?Math.round(dd/tt*100):0;
+      let phasePlanMins=0,phaseActualMins=0;
+      phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{phasePlanMins+=(t.min||30);phaseActualMins+=getTrackedMins(c,`${pi}-${pai}-${ti}`);}));
+      const phaseTimeHtml=phasePlanMins>0?`<span class="phase-time">${phaseActualMins}/${phasePlanMins}min</span>`:"";;
     const dateStr=phase.startDate&&phase.endDate?`${fmtShort(phase.startDate)} – ${fmtShort(phase.endDate)}`:'';
     const daysDiff=phase.startDate&&phase.endDate?Math.round((new Date(phase.endDate)-new Date(phase.startDate))/864e5):0;
     const pOpen=openPhases.has(pi);
@@ -1610,7 +1623,7 @@ function renderTasks(){
           <span class="drag-handle" title="Phase verschieben" onmousedown="event.stopPropagation()">⠿</span>
           <span class="ph-chev${pOpen?' open':''}" id="pc${pi}">▶</span>
           <span class="ph-tag" style="background:${phaseBarInfo.color}18;color:${phaseBarInfo.color}">${phase.id}</span>
-          <span class="ph-name">${esc(phase.name)}</span>
+          <span class="ph-name">${esc(phase.name)}</span>${phaseTimeHtml}
           ${phaseBarInfo.icon?`<span style="font-size:10px;margin-left:4px">${phaseBarInfo.icon}</span>`:''}
         </div>
         <div class="phase-right">
@@ -1635,12 +1648,15 @@ function renderTasks(){
       let ptt=0,pdd=0;
       pkg.tasks.forEach((t,ti)=>{ptt++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')pdd++});
       const ppct=ptt?Math.round(pdd/ptt*100):0;
+        let pkgPlanMins=0,pkgActualMins=0;
+        pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=`${pi}-${pai}-${ti}`;pkgActualMins+=getTrackedMins(c,tid);});
+        const pkgTimeHtml=pkgPlanMins>0?`<span class="pkg-time">${pkgActualMins}/${pkgPlanMins}min</span>`:"";;
 
       h+=`<div class="wp-wrap" data-pi="${pi}" data-pai="${pai}" draggable="true" ondragstart="dragPkgStart(event,${pi},${pai})" ondragend="dragPkgEnd(event)" ondragover="dragPkgOver(event,${pi},${pai})" ondragleave="dragPkgLeave(event)" ondrop="dropPkg(event,${pi},${pai})">
       <div class="wp-head" onclick="toggleW(${pi},${pai})">
         <span class="drag-handle" title="Kategorie verschieben" onmousedown="event.stopPropagation()">⠿</span>
         <span class="wp-chev${wOpen?' open':''}" id="wc${pi}_${pai}">▶</span>
-        <span class="wp-name">${esc(pkg.name)}</span>
+        <span class="wp-name">${esc(pkg.name)}</span>${pkgTimeHtml}
         <span style="font-size:10px;color:var(--text3);margin-left:6px">${pdd}/${ptt}</span>
         ${ppct===100?'<span style="font-size:9px;color:var(--green);margin-left:4px">✓</span>':''}
         <button class="btn sm int-col" style="margin-left:auto;opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();renamePackage(${pi},${pai})">✏️</button>
@@ -1691,6 +1707,9 @@ function renderTasks(){
         }}
         flatIdx++;
         const tracked=getTrackedMins(c,id);
+        const planPct=mins>0?Math.min(Math.round(tracked/mins*100),200):0;
+        const planCol=planPct<=100?"green":planPct<=150?"yellow":"red";
+        const planBarHtml=mins>0&&(tracked>0||st==="Erledigt")?`<span class="plan-bar" title="${tracked}/${mins}min (${planPct}%)"><span class="plan-bar-track"><span class="plan-bar-fill ${planCol}" style="width:${Math.min(planPct,100)}%"></span></span><span class="plan-bar-label">${tracked}/${mins}</span></span>`:"";;
         const isTimerOn=c.activeTimer&&c.activeTimer.taskId===id;
         const timerBtn=`<span class="timer-btn${isTimerOn?' running':''}" onclick="toggleTimer('${id}',event)" title="${isTimerOn?'Timer stoppen':'Timer starten'}">${isTimerOn?'⏹':'▶'}${tracked?`<span class="tracked">${tracked}m</span>`:''}</span>`;
         const timeBtn=`<span class="time-btn" onclick="editTaskTime(${pi},${pai},${ti})" title="Zeitbudget anpassen">⏱ ${mins}m</span>`;
@@ -1708,6 +1727,7 @@ function renderTasks(){
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
           <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
+          ${planBarHtml}
           ${timeBtn}
           ${calBtn}
           ${promptBtn}
