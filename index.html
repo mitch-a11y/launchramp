@@ -3579,8 +3579,8 @@ function addManualTime(taskId){
 // ============================================================
 // UTILS
 // ============================================================
-function openModal(id){document.getElementById(id).classList.add('show')}
-function closeModal(id){document.getElementById(id).classList.remove('show')}
+function openModal(id){var el=document.getElementById(id);el.style.display="flex";el.classList.add("show")}
+function closeModal(id){var el=document.getElementById(id);el.style.display="none";el.classList.remove("show")}
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
 function nextDay(d){const x=new Date();x.setDate(x.getDate()+((d+7-x.getDay())%7||7));return x.toISOString().split('T')[0]}
 function fmtShort(d){if(!d)return'';return new Date(d).toLocaleDateString('de-DE',{day:'numeric',month:'short'})}
