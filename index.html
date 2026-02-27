@@ -2085,6 +2085,14 @@ function toggleClientExpand(id,e){
   renderSidebar();
 }
 function delClient(id,e){e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte lÃ¶schen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}save();renderAll();toast('GelÃ¶scht')}
+function renameClientInline(cid){
+  const cl=DB.clients.find(x=>x.id===cid);
+  if(!cl)return;
+  const nn=prompt('Kundenname:',cl.name);
+  if(!nn||!nn.trim())return;
+  cl.name=nn.trim();
+  save();renderAll();
+}
 function delProject(clientId,projId,e){
   e.stopPropagation();
   const client=DB.clients.find(c=>c.id===clientId);
@@ -2135,7 +2143,7 @@ function renderSidebar(){
     let h=`<div class="ci-group${isActive?' ci-group-active':''}">
       <div class="client-item${isActive&&!isExpanded?' active':''}" onclick="toggleClientExpand('${c.id}',event)">
         <span class="ci-arrow" style="font-size:10px;margin-right:4px;color:var(--text3)">${arrow}</span>
-        <span class="ci-name">${esc(c.name)}</span>
+        <span class="ci-name" ondblclick="event.stopPropagation();renameClientInline('${c.id}')">${esc(c.name)}</span>
         <span class="ci-pct">${totalPct}%</span>
         <span class="ci-del" onclick="delClient('${c.id}',event)">â</span>
       </div>`;
