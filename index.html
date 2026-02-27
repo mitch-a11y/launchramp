@@ -122,7 +122,7 @@ button,select,input,textarea{font-family:inherit}
 .fdrop-item.selected .fcheck{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
 .search-box{margin-left:auto;border:1px solid var(--border);border-radius:16px;padding:4px 14px;font-size:12px;background:var(--surface2);color:var(--text);outline:none;width:180px;transition:var(--tr)}
 .search-box:focus{border-color:var(--accent);width:220px}
-.filter-count{font-size:11px;color:var(--text3);margin-left:4px;white-space:nowrap;transition:var(--tr);opacity:0}.filter-count.visible{opacity:1;color:var(--accent)}
+.filter-count{font-size:11px;color:var(--text3);white-space:nowrap;transition:var(--tr);opacity:0}.filter-count.visible{opacity:1;color:var(--accent)}
 
 /* STATS */
 .stats-row{display:flex;gap:1px;padding:0;background:var(--border)}
@@ -3198,6 +3198,7 @@ function applyFilters(){
     let vis=0;cg.querySelectorAll('.task-row').forEach(tr=>{if(tr.style.display!=='none')vis++;});
     cg.style.display=anyFilter?(vis>0?'':'none'):'';
   });
+  var fc=document.getElementById('filterCount');if(fc){var total=document.querySelectorAll('.task-row').length;var shown=[].slice.call(document.querySelectorAll('.task-row')).filter(function(r){return r.style.display!=='none'}).length;if(anyFilter){fc.textContent=shown+'/'+total+' Tasks';fc.classList.add('visible')}else{fc.textContent='';fc.classList.remove('visible')}}
 }
 
 // ============================================================
