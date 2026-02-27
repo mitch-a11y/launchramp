@@ -3161,7 +3161,7 @@ function updateFilterUI(){
 function renderFilterDropdowns(){
   const c=A();if(!c)return;
   const owners=new Set();
-  c.phases.forEach(ph=>ph.areas.forEach(a=>a.tasks.forEach(t=>{if(t.owner)owners.add(t.owner);})));
+  c.phases.forEach(ph=>ph.packages.forEach(a=>a.tasks.forEach(t=>{if(t.owner)owners.add(t.owner);})));
   const ownerList=[...owners].sort();
   const oPanel=document.getElementById('fdOwnerPanel');
   if(oPanel)oPanel.innerHTML='<div class="fdrop-item" onclick="clearFilter(\'owner\')" style="color:var(--text3);font-size:11px;font-style:italic">Alle Owner</div>'+ownerList.map(o=>'<div class="fdrop-item'+(fOwners.includes(o)?' selected':'')+'" data-fo="'+o+'" onclick="toggleFilterItem(\'owner\',\''+o+'\')" ><span class="fcheck">'+(fOwners.includes(o)?'\u2713':'')+'</span><span>'+o+'</span></div>').join('');
