@@ -3897,7 +3897,7 @@ function showToast(msg) { var el = document.getElementById("notifToast"); if(!el
 setTimeout(function() { if (typeof migrateUUIDs === "function") migrateUUIDs(); }, 2000);
 </script>
 <!-- M10 Modals -->
-<div id="exportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:450px">
+<div id="exportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:480px">
 <h3>📋 Projektstand exportieren</h3><div id="exportClientList" class="export-client-list"></div>
 <div style="display:flex;gap:.5rem;margin-top:1rem"><button onclick="doExport('md')" class="btn">📥 .md</button><button onclick="doExport('json')" class="btn">📥 .json</button><button onclick="closeExportModal()" class="btn btn-dim">Abbrechen</button></div>
 </div></div></div>
