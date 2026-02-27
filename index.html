@@ -3699,7 +3699,7 @@ function restoreSnapshot(clientIndex, snapshotId) {
   save(); renderAll(); return true;
 }
 function openSnapshotModal() {
-  var client = DB.clients[DB.activeClient]; var snaps = client._snapshots || [];
+  var client = DB.clients.find(function(c){return c.id===DB.activeClient}); var snaps = client._snapshots || [];
   var h = "<h3>ð Versionshistorie â " + esc(client.name) + "</h3>";
   if (snaps.length === 0) { h += "<p style=\"color:var(--dim)\">Noch keine Snapshots. Werden automatisch vor jedem Import erstellt.</p>"; }
   else { h += "<div class=\"snapshot-list\">"; snaps.forEach(function(snap) {
