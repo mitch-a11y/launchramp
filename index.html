@@ -3642,11 +3642,16 @@ function formatDateDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug"
 function formatDateShortDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()];}
 function countAllTasks(project){var c=0;project.phases.forEach(function(ph){ph.packages.forEach(function(pk){c+=pk.tasks.length;});});return c;}
 function countDoneTasks(project){var c=0;project.phases.forEach(function(ph,pi){ph.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){if(project.states[pi+"-"+pai+"-"+ti]==="Erledigt")c++;});});});return c;}
-function openExportModal(){var list=document.getElementById("exportClientList");
-var h='<label style="margin-bottom:.5rem;display:block"><input type="checkbox" id="exportAll" onchange="toggleAllExport(this.checked)"> <strong>Alle Kunden</strong></label>';
-DB.clients.forEach(function(c,i){var ck=i===DB.activeClient?"checked":"";
-h+='<div class="export-client-item"><label><input type="checkbox" class="exportClientCb" value="'+i+'" '+ck+'> '+esc(c.name)+'</label></div>';});
-list.innerHTML=h;document.getElementById("exportModal").style.display="flex";}
+window.openExportModal=function(){var m=document.getElementById("exportModal");var mc=m.querySelector(".modal-content")||m.querySelector(".modal")||m;
+var h='<h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:var(--text)">Projektstand exportieren</h3>';
+h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;font-weight:700;margin-bottom:12px"><input type="checkbox" id="expAll" onchange="toggleAllExport(this.checked)" style="width:18px;height:18px;accent-color:var(--green)"> Alle Kunden</label>';
+h+='<div style="display:flex;flex-direction:column;gap:2px;max-height:260px;overflow-y:auto;margin-bottom:16px">';
+DB.clients.forEach(function(c,i){var pc=c.projects?c.projects.length:0;h+='<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'transparent\'">';h+='<input type="checkbox" class="exp-client" data-index="'+i+'" style="width:16px;height:16px;accent-color:var(--green)">';h+='<span style="font-size:14px;color:var(--text)">'+esc(c.name)+'</span>';h+='<span style="font-size:11px;color:var(--text3);margin-left:auto">'+pc+' Projekt'+(pc!==1?'e':'')+'</span></label>'});
+h+='</div><div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">';
+h+='<button onclick="doExport(\'md\')" style="padding:8px 18px;border-radius:8px;border:none;background:var(--green);color:#fff;cursor:pointer;font-weight:700;font-size:13px">Export .md</button>';
+h+='<button onclick="doExport(\'json\')" style="padding:8px 18px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-weight:600;font-size:13px">Export .json</button>';
+h+='<button onclick="closeExportModal()" style="padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Abbrechen</button>';
+h+='</div>';mc.innerHTML=h;m.style.display="flex"};
 function closeExportModal(){document.getElementById("exportModal").style.display="none";}
 function getSelectedExportClients(){return[].slice.call(document.querySelectorAll(".exportClientCb:checked")).map(function(cb){return Number(cb.value);});}
 function toggleAllExport(ck){document.querySelectorAll(".exportClientCb").forEach(function(cb){cb.checked=ck;});}
