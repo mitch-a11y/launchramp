@@ -3892,20 +3892,20 @@ function showToast(msg) { var el = document.getElementById("notifToast"); if(!el
 setTimeout(function() { if (typeof migrateUUIDs === "function") migrateUUIDs(); }, 2000);
 </script>
 <!-- M10 Modals -->
-<div id="exportModal" class="modal" style="display:none"><div class="modal-content" style="max-width:450px">
+<div id="exportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:450px">
 <h3>📋 Projektstand exportieren</h3><div id="exportClientList" class="export-client-list"></div>
 <div style="display:flex;gap:.5rem;margin-top:1rem"><button onclick="doExport('md')" class="btn">📥 .md</button><button onclick="doExport('json')" class="btn">📥 .json</button><button onclick="closeExportModal()" class="btn btn-dim">Abbrechen</button></div>
-</div></div>
-<div id="importModal" class="modal" style="display:none"><div class="modal-content" style="max-width:500px">
+</div></div></div>
+<div id="importModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:500px">
 <h3>📥 Meeting-Update importieren</h3><p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Claude-bearbeitete .json Datei hochladen.</p>
 <input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(this)" style="margin-bottom:1rem"><div id="importStatus" style="color:var(--dim);font-size:.85rem"></div>
-<div style="margin-top:1rem"><button onclick="closeImportModal()" class="btn btn-dim">Abbrechen</button></div></div></div>
-<div id="snapshotModal" class="modal" style="display:none"><div class="modal-content" style="max-width:550px"><div id="snapshotContent"></div>
-<div style="margin-top:1rem"><button onclick="closeModal('snapshotModal')" class="btn btn-dim">Schliessen</button></div></div></div>
-<div id="diffModal" class="modal" style="display:none"><div class="modal-content" style="max-width:700px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
-<div id="diffContent" style="overflow-y:auto;flex:1"></div></div></div>
-<div id="notifModal" class="modal" style="display:none"><div class="modal-content" style="max-width:550px"><div id="notifContent"></div>
-<div style="margin-top:1rem;display:flex;gap:.5rem"><button onclick="copyAllNotifs()" class="btn">📋 Alle kopieren</button><button onclick="closeModal('notifModal')" class="btn btn-dim">Schliessen</button></div></div></div>
+<div style="margin-top:1rem"><button onclick="closeImportModal()" class="btn btn-dim">Abbrechen</button></div></div></div></div>
+<div id="snapshotModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:550px"><div id="snapshotContent"></div>
+<div style="margin-top:1rem"><button onclick="closeModal('snapshotModal')" class="btn btn-dim">Schliessen</button></div></div></div></div>
+<div id="diffModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:700px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
+<div id="diffContent" style="overflow-y:auto;flex:1"></div></div></div></div>
+<div id="notifModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:550px"><div id="notifContent"></div>
+<div style="margin-top:1rem;display:flex;gap:.5rem"><button onclick="copyAllNotifs()" class="btn">📋 Alle kopieren</button><button onclick="closeModal('notifModal')" class="btn btn-dim">Schliessen</button></div></div></div></div>
 <div id="notifToast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:0.75rem 1.5rem;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
 </body>
 </html>
