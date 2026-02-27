@@ -3027,11 +3027,14 @@ function openDocLink(id){const u=A().docLinks[id];if(u)window.open(u,'_blank');e
 // ============================================================
 function setView(v,el){
   var views=['tasksView','docsView','templatesView','teamView','insightsView'];
-  views.forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
+  views.forEach(function(id){
+    var e=document.getElementById(id);
+    if(e){e.style.display='none';e.classList.remove('active');}
+  });
   var activeId=v+'View';
   if(v==='insights') activeId='insightsView';
   var target=document.getElementById(activeId);
-  if(target) target.style.display='';
+  if(target){target.style.display='';target.classList.add('active');}
   document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('vtab-active');});
   if(el) el.classList.add('vtab-active');
   if(v==='tasks'){document.getElementById('filtersBar').style.display='';renderTasks();}
