@@ -2118,6 +2118,9 @@ function renderAll(){
     dv.classList.remove('active');
     cv.classList.remove('hidden');
     renderTopbar();renderStats();renderTasks();renderDocs();renderCountdown();renderMiniTimeline();applyFilters();
+    var tpl=document.getElementById('templatesView');if(tpl){tpl.style.display='none';tpl.classList.remove('active');}
+    var sr=document.getElementById('statsRow');if(sr)sr.style.display='';
+    var pb=document.getElementById('progressBar');if(pb)pb.style.display='';
   }
 }
 
@@ -3027,7 +3030,7 @@ function openDocLink(id){const u=A().docLinks[id];if(u)window.open(u,'_blank');e
 // VIEWS
 // ============================================================
 function setView(v,el){
-  var views=['tasksView','docsView','teamView','insightsView'];
+  var views=['tasksView','docsView','teamView','insightsView','templatesView'];
   views.forEach(function(id){
     var e=document.getElementById(id);
     if(e){e.style.display='none';e.classList.remove('active');}
@@ -3044,6 +3047,8 @@ function setView(v,el){
   
   if(v==='team') renderTeam();
   if(v==='insights'){renderProcessDashboard();renderSmartReport();renderTimerReport();}
+  var sr=document.getElementById('statsRow');if(sr)sr.style.display='';
+  var pb=document.getElementById('progressBar');if(pb)pb.style.display='';
 }
 
 function toggleCV(){
@@ -3478,7 +3483,17 @@ function getTimerData(){const{start,end}=getTRRange();const data={};DB.clients.f
 function renderTimerReport(){const el=document.getElementById('timerReportView');if(!el)return;const data=getTimerData();const owners=Object.keys(data).sort();let h='<div class="report-view">';h+='<div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap"><strong style="font-size:1.1rem">⏱️ Timer Report</strong>';h+='<div class="tr-period-filter">';['week','month','lastMonth','year'].forEach(p=>{h+='<button onclick="setTRPeriod(\''+p+'\')"\ style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:.8rem;'+(trPeriod===p?'background:var(--accent);color:#fff':'background:var(--surface2);color:var(--txt)')+'">'+({week:'Woche',month:'Monat',lastMonth:'Letzter M.',year:'Jahr'}[p])+'</button>';});h+='</div>';h+='<button onclick="exportTimerReportCSV()" style="padding:4px 12px;border-radius:6px;background:var(--surface2);color:var(--txt);border:1px solid var(--border);cursor:pointer;font-size:.85rem">⬇ CSV</button></div>';
 if(!owners.length){h+='<p style="color:var(--dim);padding:1rem">Keine Zeitdaten im gewählten Zeitraum.</p></div>';el.innerHTML=h;return;}const maxTotal=Math.max(...owners.map(o=>data[o].total),1);owners.forEach(o=>{const d=data[o];const clientNames=Object.keys(d.clients).sort();const compliance=d.planned>0?Math.round(d.total/d.planned*100):0;const compClass=compliance>120?'rpt-red':compliance>80?'rpt-green':'rpt-yellow';h+='<div class="report-section"><div style="display:flex;justify-content:space-between;align-items:center"><h4>'+esc(o)+'</h4><span style="font-size:.85rem">Gesamt: <strong>'+d.total+'</strong>m | Plan: '+d.planned+'m | <span class="'+compClass+'">'+compliance+'%</span></span></div>';h+='<div class="timer-report-bar" style="margin:8px 0">';const colors=['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];clientNames.forEach((cn,i)=>{const w=Math.round(d.clients[cn].logged/maxTotal*100);h+='<div title="'+esc(cn)+': '+d.clients[cn].logged+'m" style="width:'+w+'%;background:'+colors[i%colors.length]+';height:100%;display:inline-block"></div>';});h+='</div>';h+='<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:4px">';clientNames.forEach((cn,i)=>{h+='<span style="font-size:.75rem;color:var(--dim)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+colors[i%colors.length]+';margin-right:3px"></span>'+esc(cn)+': '+d.clients[cn].logged+'m</span>';});h+='</div></div>';});h+='</div>';el.innerHTML=h;}
 function exportTimerReportCSV(){const data=getTimerData();let csv='Owner,Kunde,Geloggt_Min,Plan_Min,Compliance_%\n';Object.entries(data).sort().forEach(([owner,d])=>{Object.entries(d.clients).sort().forEach(([client,cd])=>{const comp=cd.planned?Math.round(cd.logged/cd.planned*100):0;csv+='"'+owner+'","'+client+'",'+cd.logged+','+cd.planned+','+comp+'\n';});});const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='launchramp-timer-report.csv';a.click();}
-function showTemplates(){var views=['tasksView','docsView','teamView','insightsView'];views.forEach(function(id){var e=document.getElementById(id);if(e){e.style.display='none';e.classList.remove('active');}});var fb=document.getElementById('filtersBar');if(fb)fb.style.display='none';document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('vtab-active');});var tpl=document.getElementById('templatesView');if(tpl){tpl.style.display='';tpl.classList.add('active');}renderTemplates();}
+function showTemplates(){
+  var views=['tasksView','docsView','teamView','insightsView','templatesView'];
+  views.forEach(function(id){var e=document.getElementById(id);if(e){e.style.display='none';e.classList.remove('active');}});
+  var fb=document.getElementById('filtersBar');if(fb)fb.style.display='none';
+  var sr=document.getElementById('statsRow');if(sr)sr.style.display='none';
+  var pb=document.getElementById('progressBar');if(pb)pb.style.display='none';
+  document.querySelectorAll('.vtab').forEach(function(t){t.classList.remove('vtab-active');});
+  var tpl=document.getElementById('templatesView');
+  if(tpl){tpl.style.display='';tpl.classList.add('active');}
+  renderTemplates();
+}
 </script>
 </body>
 </html>
