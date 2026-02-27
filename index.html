@@ -510,6 +510,26 @@ button,select,input,textarea{font-family:inherit}
 .tr-period-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .tr-period-filter button{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--dim);cursor:pointer;font-size:12px}
 .tr-period-filter button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* === M10: Meeting-Export CSS === */
+.notes-toggle{margin-top:.5rem}.notes-toggle summary{cursor:pointer;color:var(--dim);font-size:.85rem}
+.notes-toggle textarea{width:100%;margin-top:.25rem;background:var(--surface2);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:.5rem;font-size:.85rem;resize:vertical}
+.note-icon{font-size:.75rem;margin-left:.25rem;cursor:help;opacity:.7}
+.export-btn,.import-btn,.snapshot-btn{background:var(--surface2);border:1px solid var(--border);color:var(--txt);padding:.3rem .6rem;border-radius:6px;cursor:pointer;font-size:.8rem;display:inline-flex;align-items:center;gap:.25rem}
+.export-btn:hover,.import-btn:hover,.snapshot-btn:hover{background:var(--border)}
+.export-client-list{max-height:300px;overflow-y:auto;margin-top:.5rem}
+.export-client-item{padding:.3rem 0}.export-client-item label{cursor:pointer;display:flex;align-items:center;gap:.5rem}
+.snapshot-list{max-height:400px;overflow-y:auto}
+.snapshot-item{display:flex;justify-content:space-between;align-items:center;padding:.75rem;background:var(--surface2);border-radius:8px;margin-bottom:.5rem;border:1px solid var(--border)}
+.diff-review{max-height:70vh;overflow-y:auto;padding:1rem}
+.diff-item{display:flex;align-items:flex-start;gap:.5rem;padding:.5rem .75rem;background:var(--surface2);border-radius:6px;margin-bottom:.25rem;border-left:3px solid var(--border);font-size:.9rem}
+.diff-item.green{border-left-color:var(--green)}.diff-item.yellow{border-left-color:var(--yellow)}.diff-item.red{border-left-color:var(--red)}
+.diff-item input[type=checkbox]{margin-top:.2rem;flex-shrink:0}
+.diff-item .old-val{text-decoration:line-through;color:var(--dim)}.diff-item .new-val{color:var(--green);font-weight:600}.diff-item .arrow{color:var(--dim)}
+.diff-summary{display:flex;gap:1rem;margin-bottom:1rem;padding:.75rem;background:var(--surface2);border-radius:8px;flex-wrap:wrap}.diff-summary span{font-size:.9rem}
+.notif-person{margin-bottom:1rem}.notif-person h4{margin-bottom:.5rem}
+.notif-msg{background:var(--surface2);border-radius:8px;padding:.75rem;margin-bottom:.5rem;border:1px solid var(--border);white-space:pre-wrap;font-size:.85rem;line-height:1.5}
+.btn-sm{padding:.2rem .5rem;font-size:.8rem;background:var(--surface2);border:1px solid var(--border);color:var(--txt);border-radius:4px;cursor:pointer}.btn-sm:hover{background:var(--border)}
+.conflict-item{background:rgba(255,200,0,.1);border:1px solid var(--yellow);border-radius:8px;padding:.75rem;margin-bottom:.5rem}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -552,6 +572,9 @@ button,select,input,textarea{font-family:inherit}
           <span class="link-count" id="linkCount">0</span>
         </div>
         <div class="link-panel" id="linkPanel"></div>
+      <button class="export-btn" onclick="openExportModal()" title="Projektstand exportieren">📋 Export</button>
+      <button class="import-btn" onclick="openImportModal()" title="Meeting-Update importieren">📥 Import</button>
+      <button class="snapshot-btn" onclick="openSnapshotModal()" title="Versionshistorie">🕐 Verlauf</button>
       </div>
     </div>
 
@@ -627,6 +650,7 @@ button,select,input,textarea{font-family:inherit}
       <label style="margin-top:8px;font-size:.85rem;color:var(--dim)">Fällig</label>
       <input type="date" id="tmDue" style="width:100%;padding:8px;border-radius:8px;background:var(--surface2);color:var(--txt);border:1px solid var(--border)">
     </div>
+  <details class="notes-toggle"><summary>📝 Notizen</summary><textarea id="tmNotes" rows="2" placeholder="Interne Notizen zum Task..."></textarea></details>
     <div class="mf"><label>Voraussetzung</label><input id="tmVor" placeholder="Optional..."></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('taskModal')">Abbrechen</button>
@@ -2468,7 +2492,8 @@ function renderTasks(){
           :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'sop')">🎬 SOP</span>`;
         h+=`<div class="task-row ${(!c.states[id]&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
-          <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
+      var noteIcon=task.notes?'<span class="note-icon" title="'+esc(task.notes)+'">📝</span>':'';
+          <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}${noteIcon}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
           ${planBarHtml}
           ${timeBtn}
@@ -2677,6 +2702,8 @@ function openAddTask(pi,pai){
     document.getElementById('tmDue').value=task.due||'';
   document.getElementById('tmVor').value='';
   document.getElementById('tmDel').style.display='none';
+  document.getElementById('tmDue').value=task.due||'';
+  document.getElementById('tmNotes').value=task.notes||'';
   openModal('taskModal');
   setTimeout(()=>document.getElementById('tmName').focus(),100);
 }
@@ -2697,14 +2724,16 @@ function saveTask(){
   if(!name)return;
   const c=A();
   const data={t:name,owner:document.getElementById('tmOwner').value,ki:false,vor:document.getElementById('tmVor').value.trim(),auto:'Niedrig',min:parseInt(document.getElementById('tmMin').value)||30,opt:false};
-    task.due=document.getElementById('tmDue').value||undefined;
+  data.due=document.getElementById('tmDue').value||undefined;data.notes=document.getElementById('tmNotes').value||undefined;
   if(taskCtx.mode==='add'){
+    data._id='t_'+Math.random().toString(36).substring(2,10);
     c.phases[taskCtx.pi].packages[taskCtx.pai].tasks.push(data);
     toast('Task hinzugefügt');
   } else {
     const old=c.phases[taskCtx.pi].packages[taskCtx.pai].tasks[taskCtx.ti];
     data.ki=old.ki;
     data.links=old.links||{};
+    data._id=old._id;data.timeLog=old.timeLog;data.scheduled=old.scheduled;data.opt=old.opt;
     c.phases[taskCtx.pi].packages[taskCtx.pai].tasks[taskCtx.ti]=data;
     toast('Task aktualisiert');
   }
@@ -3600,6 +3629,283 @@ function showTemplates(){
   if(tpl){tpl.style.display='';tpl.classList.add('active');}
   renderTemplates();
 }
+// === M10: Meeting-Export System ===
+var MAX_SNAPSHOTS=20;
+function migrateUUIDs(){var changed=false;DB.clients.forEach(function(c){
+if(!c._id){c._id="c_"+Math.random().toString(36).substring(2,10);changed=true;}
+c.projects.forEach(function(p){if(!p._id){p._id="p_"+Math.random().toString(36).substring(2,10);changed=true;}
+p.phases.forEach(function(ph){if(!ph._id){ph._id="ph_"+Math.random().toString(36).substring(2,10);changed=true;}
+ph.packages.forEach(function(pk){if(!pk._id){pk._id="pkg_"+Math.random().toString(36).substring(2,10);changed=true;}
+pk.tasks.forEach(function(t){if(!t._id){t._id="t_"+Math.random().toString(36).substring(2,10);changed=true;}});});});});});
+if(changed)save();}
+function formatDateDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()]+" "+d.getFullYear();}
+function formatDateShortDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()];}
+function countAllTasks(project){var c=0;project.phases.forEach(function(ph){ph.packages.forEach(function(pk){c+=pk.tasks.length;});});return c;}
+function countDoneTasks(project){var c=0;project.phases.forEach(function(ph,pi){ph.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){if(project.states[pi+"-"+pai+"-"+ti]==="Erledigt")c++;});});});return c;}
+function openExportModal(){var list=document.getElementById("exportClientList");
+var h='<label style="margin-bottom:.5rem;display:block"><input type="checkbox" id="exportAll" onchange="toggleAllExport(this.checked)"> <strong>Alle Kunden</strong></label>';
+DB.clients.forEach(function(c,i){var ck=i===DB.activeClient?"checked":"";
+h+='<div class="export-client-item"><label><input type="checkbox" class="exportClientCb" value="'+i+'" '+ck+'> '+esc(c.name)+'</label></div>';});
+list.innerHTML=h;document.getElementById("exportModal").style.display="flex";}
+function closeExportModal(){document.getElementById("exportModal").style.display="none";}
+function getSelectedExportClients(){return[].slice.call(document.querySelectorAll(".exportClientCb:checked")).map(function(cb){return Number(cb.value);});}
+function toggleAllExport(ck){document.querySelectorAll(".exportClientCb").forEach(function(cb){cb.checked=ck;});}
+function generateMarkdownExport(ci){var md="";ci.forEach(function(idx,n){var client=DB.clients[idx];if(n>0)md+="\n\n---\n\n";
+md+="# Projektstand: "+client.name+"\n";md+="Exportiert: "+formatDateDE(new Date())+"\n";
+md+="<!-- client_id: "+(client._id||"")+" -->\n\n";
+client.projects.forEach(function(project){var tt=countAllTasks(project);var dt=countDoneTasks(project);var pct=tt>0?Math.round(dt/tt*100):0;
+md+="## Projekt: "+project.name+"\n";md+="Typ: "+(project.type||"\u2013")+" | Launch: "+(project.launchDate?formatDateDE(new Date(project.launchDate)):"\u2013")+"\n";
+md+="Fortschritt: "+pct+"% ("+dt+"/"+tt+")\n";md+="<!-- project_id: "+(project._id||"")+" -->\n\n";
+var tc=0;project.phases.forEach(function(phase,pi){var pe=phase.endDate?formatDateDE(new Date(phase.endDate)):"\u2013";
+md+="### PHASE "+(pi+1)+": "+phase.name.toUpperCase()+" (bis "+pe+")\n";md+="<!-- phase_id: "+(phase._id||"")+" -->\n\n";
+phase.packages.forEach(function(pkg,pai){var pt=pkg.tasks.length;var pd=pkg.tasks.filter(function(t,ti){return project.states[pi+"-"+pai+"-"+ti]==="Erledigt";}).length;
+md+="#### "+pkg.name+" ("+pd+"/"+pt+" erledigt)\n";md+="<!-- package_id: "+(pkg._id||"")+" -->\n\n";
+md+="| # | Task | Owner | Aufwand | Status | Deadline | Notizen |\n|---|------|-------|---------|--------|----------|--------|\n";
+pkg.tasks.forEach(function(task,ti){tc++;var sk=pi+"-"+pai+"-"+ti;var st=project.states[sk]||"Offen";
+var auf=task.min?task.min+"m":"\u2013";var dl=task.due?formatDateShortDE(new Date(task.due)):"\u2013";var nt=task.notes||"";
+if(task.due&&st!=="Erledigt"){var now=new Date();now.setHours(0,0,0,0);var dd=new Date(task.due);dd.setHours(0,0,0,0);if(dd<now)nt=(nt?nt+" | ":"")+"\u26a0\ufe0f \u00dcberf\u00e4llig";}
+md+="| "+(pi+1)+"."+tc+" | "+task.t+" <!-- _id:"+(task._id||"")+" --> | "+(task.owner||"\u2013")+" | "+auf+" | "+st+" | "+dl+" | "+nt+" |\n";});md+="\n";});tc=0;});});});return md;}
+function generateJSONExport(ci){return JSON.stringify({exportDate:new Date().toISOString(),version:"1.0",
+clients:ci.map(function(idx){var c=DB.clients[idx];return{_id:c._id,name:c.name,projects:c.projects.map(function(p){return{_id:p._id,name:p.name,type:p.type,launchDate:p.launchDate,startDate:p.startDate,
+states:Object.assign({},p.states),phases:p.phases.map(function(ph,pi){return{_id:ph._id,name:ph.name,color:ph.color,endDate:ph.endDate,
+packages:ph.packages.map(function(pk,pai){return{_id:pk._id,name:pk.name,tasks:pk.tasks.map(function(t,ti){return{_id:t._id,t:t.t,owner:t.owner,min:t.min,due:t.due,notes:t.notes,
+status:p.states[pi+"-"+pai+"-"+ti]||"Offen",ki:t.ki,vor:t.vor,auto:t.auto,links:t.links,timeLog:t.timeLog};})};})};})};})};})},null,2);}
+function doExport(fmt){var ids=getSelectedExportClients();if(ids.length===0)return alert("Bitte Kunden w\u00e4hlen.");
+var cn=ids.length===1?DB.clients[ids[0]].name.toLowerCase().replace(/[^a-z0-9]/g,"-"):"alle-kunden";var ds=new Date().toISOString().split("T")[0];
+var content,fn,mime;if(fmt==="md"){content=generateMarkdownExport(ids);fn="projektstand-"+cn+"-"+ds+".md";mime="text/markdown";}
+else{content=generateJSONExport(ids);fn="projektstand-"+cn+"-"+ds+".json";mime="application/json";}
+var blob=new Blob([content],{type:mime});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);closeExportModal();}
+var MAX_SNAPSHOTS = 20;
+function createSnapshot(clientIndex, trigger) {
+  var client = DB.clients[clientIndex];
+  if (!client._snapshots) client._snapshots = [];
+  var copy = JSON.parse(JSON.stringify(client, function(key, val) { return key === "_snapshots" ? undefined : val; }));
+  var snapshot = { id: "snap_" + Date.now(), timestamp: new Date().toISOString(), trigger: trigger, data: copy };
+  client._snapshots.unshift(snapshot);
+  if (client._snapshots.length > MAX_SNAPSHOTS) client._snapshots = client._snapshots.slice(0, MAX_SNAPSHOTS);
+  save(); return snapshot.id;
+}
+function restoreSnapshot(clientIndex, snapshotId) {
+  var client = DB.clients[clientIndex]; var snapshots = client._snapshots || [];
+  var snap = snapshots.find(function(s) { return s.id === snapshotId; });
+  if (!snap) return false;
+  createSnapshot(clientIndex, "Backup vor Wiederherstellung");
+  var preserved = client._snapshots; Object.assign(client, snap.data); client._snapshots = preserved;
+  save(); renderAll(); return true;
+}
+function openSnapshotModal() {
+  var client = DB.clients[DB.activeClient]; var snaps = client._snapshots || [];
+  var h = "<h3>🕐 Versionshistorie — " + esc(client.name) + "</h3>";
+  if (snaps.length === 0) { h += "<p style=\"color:var(--dim)\">Noch keine Snapshots. Werden automatisch vor jedem Import erstellt.</p>"; }
+  else { h += "<div class=\"snapshot-list\">"; snaps.forEach(function(snap) {
+    var d = new Date(snap.timestamp); var ds = formatDateDE(d) + ", " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+    h += "<div class=\"snapshot-item\"><div><strong>📸 " + ds + "</strong><br><span style=\"color:var(--dim);font-size:0.85rem\">" + esc(snap.trigger) + "</span></div>";
+    h += "<div style=\"display:flex;gap:0.5rem\"><button onclick=\"if(confirm('Wiederherstellen? Aktueller Stand wird vorher als Backup gespeichert.'))restoreSnapshot(" + DB.activeClient + ",'" + snap.id + "')\" class=\"btn btn-sm\" style=\"background:var(--red)\">↩️ Wiederherstellen</button></div></div>";
+  }); h += "</div>"; }
+  document.getElementById("snapshotModal").querySelector(".modal-body").innerHTML = h;
+  openModal("snapshotModal");
+}
+function openImportModal() { document.getElementById("importFileInput").value = ""; document.getElementById("importModal").querySelector(".modal-body").innerHTML = "<h3>📥 Meeting-Update importieren</h3><p>JSON-Datei hochladen die von Claude erstellt wurde:</p><input type=\"file\" id=\"importFileInput\" accept=\".json\" onchange=\"handleImportFile(this)\" style=\"margin:1rem 0\"><div id=\"importStatus\"></div>"; openModal("importModal"); }
+function handleImportFile(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var importData = JSON.parse(e.target.result);
+      if (!importData.clients || !importData.clients.length) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">❌ Ungültige Datei: Kein clients-Array gefunden.</p>"; return; }
+      var changes = computeDiff(importData);
+      if (changes.length === 0) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--green)\">✅ Keine Änderungen erkannt. Der Stand ist identisch.</p>"; return; }
+      window._pendingImport = { data: importData, changes: changes };
+      closeModal("importModal"); renderDiffReview(changes);
+    } catch(err) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">❌ JSON Parse-Fehler: " + esc(err.message) + "</p>"; }
+  };
+  reader.readAsText(file);
+}
+function findTaskKey(project, taskId) {
+  for (var pi = 0; pi < project.phases.length; pi++) {
+    for (var pai = 0; pai < project.phases[pi].packages.length; pai++) {
+      for (var ti = 0; ti < project.phases[pi].packages[pai].tasks.length; ti++) {
+        if (project.phases[pi].packages[pai].tasks[ti]._id === taskId) return pi + "-" + pai + "-" + ti;
+      }
+    }
+  }
+  return null;
+}
+function computeDiff(importData) {
+  var changes = [];
+  importData.clients.forEach(function(ic) {
+    var cc = DB.clients.find(function(c) { return c._id === ic._id; });
+    if (!cc) { changes.push({ type: "new_client", severity: "red", data: ic }); return; }
+    (ic.projects || []).forEach(function(ip) {
+      var cp = cc.projects.find(function(p) { return p._id === ip._id; });
+      if (!cp) { changes.push({ type: "new_project", severity: "red", client: cc.name, data: ip }); return; }
+      (ip.phases || []).forEach(function(iph) {
+        var cph = cp.phases.find(function(ph) { return ph._id === iph._id; });
+        if (!cph) { changes.push({ type: "new_phase", severity: "red", project: cp.name, data: iph }); return; }
+        if (iph.name !== cph.name) changes.push({ type: "rename_phase", severity: "yellow", phase: cph.name, newName: iph.name, _ref: cph });
+        (iph.packages || []).forEach(function(ipk) {
+          var cpk = cph.packages.find(function(pk) { return pk._id === ipk._id; });
+          if (!cpk) { changes.push({ type: "new_package", severity: "yellow", phase: cph.name, data: ipk }); return; }
+          (ipk.tasks || []).forEach(function(it) {
+            var ct = cpk.tasks.find(function(t) { return t._id === it._id; });
+            if (!ct) { changes.push({ type: "new_task", severity: "yellow", phase: cph.name, package: cpk.name, data: it }); return; }
+            var stKey = findTaskKey(cp, ct._id); var curSt = (cp.states && cp.states[stKey]) || "Offen";
+            if (it.status && it.status !== curSt) changes.push({ type: "status_change", severity: "green", task: ct.t, _id: ct._id, oldStatus: curSt, newStatus: it.status, _project: cp, _stKey: stKey });
+            if (it.due !== undefined && it.due !== ct.due) changes.push({ type: "deadline_change", severity: "yellow", task: ct.t, _id: ct._id, oldDeadline: ct.due, newDeadline: it.due, _task: ct });
+            if (it.owner !== undefined && it.owner !== ct.owner) changes.push({ type: "owner_change", severity: "yellow", task: ct.t, _id: ct._id, oldOwner: ct.owner, newOwner: it.owner, _task: ct });
+            if (it.t !== undefined && it.t !== ct.t) changes.push({ type: "rename_task", severity: "green", task: ct.t, _id: ct._id, newName: it.t, _task: ct });
+            if (it.notes !== undefined && it.notes !== ct.notes) changes.push({ type: "notes_change", severity: "green", task: ct.t, _id: ct._id, oldNotes: ct.notes, newNotes: it.notes, _task: ct });
+            if (it.min !== undefined && it.min !== ct.min) changes.push({ type: "effort_change", severity: "green", task: ct.t, _id: ct._id, oldMin: ct.min, newMin: it.min, _task: ct });
+          });
+          cpk.tasks.forEach(function(ct) { var still = ipk.tasks.find(function(t) { return t._id === ct._id; }); if (!still) changes.push({ type: "delete_task", severity: "red", task: ct.t, _id: ct._id, phase: cph.name, package: cpk.name }); });
+        });
+      });
+    });
+  });
+  return changes;
+}
+function renderDiffReview(changes) {
+  var greens = changes.filter(function(c) { return c.severity === "green"; });
+  var yellows = changes.filter(function(c) { return c.severity === "yellow"; });
+  var reds = changes.filter(function(c) { return c.severity === "red"; });
+  var h = "<h3>📥 Import-Review</h3>";
+  h += "<p>" + changes.length + " Änderungen: " + greens.length + " 🟢  " + yellows.length + " 🟡  " + reds.length + " 🔴</p>";
+  if (greens.length) h += "<button onclick=\"checkAllGreen()\" class=\"btn btn-sm\" style=\"margin-bottom:1rem\">✅ Alle Grünen annehmen</button>";
+  function row(c, i) {
+    var chk = c.severity === "green" ? "checked" : "";
+    var icon = c.severity === "green" ? "🟢" : c.severity === "yellow" ? "🟡" : "🔴";
+    var desc = "";
+    if (c.type === "status_change") desc = icon + " <b>" + esc(c.task) + "</b> — " + esc(c.oldStatus) + " → " + esc(c.newStatus);
+    else if (c.type === "deadline_change") desc = icon + " <b>" + esc(c.task) + "</b> — Deadline: " + (c.oldDeadline||"–") + " → " + (c.newDeadline||"–");
+    else if (c.type === "owner_change") desc = icon + " <b>" + esc(c.task) + "</b> — Owner: " + (c.oldOwner||"–") + " → " + (c.newOwner||"–");
+    else if (c.type === "rename_task") desc = icon + " Umbenennung: " + esc(c.task) + " → " + esc(c.newName);
+    else if (c.type === "notes_change") desc = icon + " <b>" + esc(c.task) + "</b> — Notiz aktualisiert";
+    else if (c.type === "effort_change") desc = icon + " <b>" + esc(c.task) + "</b> — Aufwand: " + (c.oldMin||"–") + " → " + (c.newMin||"–");
+    else if (c.type === "new_task") desc = icon + " NEUER TASK: <b>" + esc(c.data.t || c.data.text) + "</b> → " + esc(c.phase) + " / " + esc(c.package);
+    else if (c.type === "new_package") desc = icon + " NEUES PACKAGE: <b>" + esc(c.data.name) + "</b> → " + esc(c.phase);
+    else if (c.type === "new_phase") desc = icon + " NEUE PHASE: <b>" + esc(c.data.name) + "</b>";
+    else if (c.type === "rename_phase") desc = icon + " Phase: " + esc(c.phase) + " → " + esc(c.newName);
+    else if (c.type === "delete_task") desc = icon + " LÖSCHEN: <b>" + esc(c.task) + "</b> (" + esc(c.phase) + ")";
+    else if (c.type === "new_client") desc = icon + " NEUER KUNDE: <b>" + esc(c.data.name) + "</b>";
+    else if (c.type === "new_project") desc = icon + " NEUES PROJEKT: <b>" + esc(c.data.name) + "</b>";
+    else desc = icon + " " + c.type;
+    return "<label class=\"diff-row diff-" + c.severity + "\"><input type=\"checkbox\" data-idx=\"" + i + "\" " + chk + "> " + desc + "</label>";
+  }
+  if (greens.length) { h += "<h4>🟢 Status/Notiz-Änderungen</h4>"; greens.forEach(function(c) { h += row(c, changes.indexOf(c)); }); }
+  if (yellows.length) { h += "<h4>🟡 Inhaltliche Änderungen</h4>"; yellows.forEach(function(c) { h += row(c, changes.indexOf(c)); }); }
+  if (reds.length) { h += "<h4>🔴 Strukturelle Änderungen</h4>"; reds.forEach(function(c) { h += row(c, changes.indexOf(c)); }); }
+  h += "<div style=\"display:flex;gap:1rem;margin-top:1.5rem\"><button onclick=\"applySelectedChanges()\" class=\"btn\" style=\"background:var(--green)\">💾 Ausgewählte übernehmen</button>";
+  h += "<button onclick=\"closeModal('diffModal')\" class=\"btn\" style=\"background:var(--red)\">❌ Abbrechen</button></div>";
+  document.getElementById("diffModal").querySelector(".modal-body").innerHTML = h;
+  openModal("diffModal");
+}
+function checkAllGreen() { document.querySelectorAll("#diffModal .diff-green input[type=checkbox]").forEach(function(cb) { cb.checked = true; }); }
+function applySelectedChanges() {
+  var checks = document.querySelectorAll("#diffModal input[type=checkbox]:checked");
+  var indices = []; checks.forEach(function(cb) { indices.push(parseInt(cb.dataset.idx)); });
+  if (indices.length === 0) { alert("Keine Änderungen ausgewählt."); return; }
+  var changes = window._pendingImport.changes;
+  var clientIdx = DB.clients.findIndex(function(c) { return c._id === window._pendingImport.data.clients[0]._id; });
+  if (clientIdx >= 0) createSnapshot(clientIdx, "Backup vor Import (" + indices.length + " Änderungen)");
+  var applied = 0;
+  indices.forEach(function(i) {
+    var c = changes[i]; if (!c) return;
+    if (c.type === "status_change" && c._project && c._stKey) { if (!c._project.states) c._project.states = {}; c._project.states[c._stKey] = c.newStatus; applied++; }
+    else if (c.type === "deadline_change" && c._task) { c._task.due = c.newDeadline; applied++; }
+    else if (c.type === "owner_change" && c._task) { c._task.owner = c.newOwner; applied++; }
+    else if (c.type === "rename_task" && c._task) { c._task.t = c.newName; applied++; }
+    else if (c.type === "notes_change" && c._task) { c._task.notes = c.newNotes; applied++; }
+    else if (c.type === "effort_change" && c._task) { c._task.min = c.newMin; applied++; }
+    else if (c.type === "new_task") {
+      var ic = window._pendingImport.data.clients.find(function(x) { return DB.clients.find(function(cc) { return cc._id === x._id; }); });
+      if (ic) { var cc = DB.clients.find(function(x) { return x._id === ic._id; });
+        ic.projects.forEach(function(ip) { var cp = cc.projects.find(function(p) { return p._id === ip._id; }); if (!cp) return;
+          ip.phases.forEach(function(iph) { var cph = cp.phases.find(function(ph) { return ph._id === iph._id; }); if (!cph) return;
+            iph.packages.forEach(function(ipk) { var cpk = cph.packages.find(function(pk) { return pk._id === ipk._id; }); if (!cpk) return;
+              ipk.tasks.forEach(function(it) { if (it._id === c.data._id) { var nt = { t: it.t || it.text, min: it.min || 60, due: it.due || "", owner: it.owner || "", notes: it.notes || "", _id: genId("t") }; cpk.tasks.push(nt); applied++; }
+              });
+            });
+          });
+        });
+      }
+    }
+  });
+  save(); renderAll(); closeModal("diffModal");
+  var notifs = generateNotifications(changes, indices);
+  if (notifs && notifs.length) { openNotifModal(notifs); }
+  else { showToast("✅ " + applied + " Änderungen übernommen"); }
+  window._pendingImport = null;
+}
+function generateNotifications(changes, appliedIndices) {
+  var byOwner = {};
+  appliedIndices.forEach(function(i) {
+    var c = changes[i]; if (!c) return;
+    var owner = "";
+    if (c._task) owner = c._task.owner || "";
+    else if (c.data && c.data.owner) owner = c.data.owner;
+    if (!owner) return;
+    if (!byOwner[owner]) byOwner[owner] = [];
+    var msg = "";
+    if (c.type === "status_change") msg = "Status: " + (c.task||"") + " → " + c.newStatus;
+    else if (c.type === "deadline_change") msg = "Deadline: " + (c.task||"") + " → " + (c.newDeadline||"entfernt");
+    else if (c.type === "owner_change") msg = "Du bist jetzt Owner: " + (c.task||"");
+    else if (c.type === "new_task") msg = "Neuer Task: " + (c.data.t || c.data.text || "");
+    else if (c.type === "notes_change") msg = "Notiz aktualisiert: " + (c.task||"");
+    else if (c.type === "rename_task") msg = "Umbenannt: " + (c.task||"") + " → " + (c.newName||"");
+    else if (c.type === "effort_change") msg = "Aufwand geändert: " + (c.task||"");
+    else return;
+    byOwner[owner].push(msg);
+  });
+  var result = [];
+  Object.keys(byOwner).forEach(function(owner) {
+    var lines = "Meeting-Update " + formatDateDE(new Date()) + ":\n";
+    byOwner[owner].forEach(function(m) { lines += "• " + m + "\n"; });
+    result.push({ owner: owner, count: byOwner[owner].length, text: lines });
+  });
+  return result;
+}
+function openNotifModal(notifs) {
+  var h = "<h3>📬 Team-Updates nach Import</h3>";
+  notifs.forEach(function(n, i) {
+    h += "<div style=\"margin:1rem 0;padding:1rem;background:var(--bg2);border-radius:8px\">";
+    h += "<strong>👤 " + esc(n.owner) + " (" + n.count + " Änderungen)</strong>";
+    h += "<pre id=\"notif_" + i + "\" style=\"margin:0.5rem 0;white-space:pre-wrap;font-size:0.85rem\">" + esc(n.text) + "</pre>";
+    h += "<button onclick=\"copyNotif(" + i + ")\" class=\"btn btn-sm\">📋 Kopieren</button>";
+    h += "</div>";
+  });
+  h += "<div style=\"display:flex;gap:1rem;margin-top:1rem\"><button onclick=\"copyAllNotifs()\" class=\"btn btn-sm\">📋 Alle kopieren</button>";
+  h += "<button onclick=\"closeModal('notifModal')\" class=\"btn btn-sm\">⏭️ Fertig</button></div>";
+  window._notifData = notifs;
+  document.getElementById("notifModal").querySelector(".modal-body").innerHTML = h;
+  openModal("notifModal");
+}
+function copyNotif(i) {
+  var el = document.getElementById("notif_" + i);
+  if (el) { navigator.clipboard.writeText(el.textContent).then(function() { showToast("📋 Kopiert!"); }); }
+}
+function copyAllNotifs() {
+  if (!window._notifData) return;
+  var all = window._notifData.map(function(n) { return "--- " + n.owner + " ---\n" + n.text; }).join("\n\n");
+  navigator.clipboard.writeText(all).then(function() { showToast("📋 Alle kopiert!"); });
+}
+function showToast(msg) { var el = document.getElementById("notifToast"); if(!el) return; el.textContent = msg; el.style.display = "block"; setTimeout(function() { el.style.display = "none"; }, 3000); }
+setTimeout(function() { if (typeof migrateUUIDs === "function") migrateUUIDs(); }, 2000);
 </script>
+<!-- M10 Modals -->
+<div id="exportModal" class="modal" style="display:none"><div class="modal-content" style="max-width:450px">
+<h3>📋 Projektstand exportieren</h3><div id="exportClientList" class="export-client-list"></div>
+<div style="display:flex;gap:.5rem;margin-top:1rem"><button onclick="doExport('md')" class="btn">📥 .md</button><button onclick="doExport('json')" class="btn">📥 .json</button><button onclick="closeExportModal()" class="btn btn-dim">Abbrechen</button></div>
+</div></div>
+<div id="importModal" class="modal" style="display:none"><div class="modal-content" style="max-width:500px">
+<h3>📥 Meeting-Update importieren</h3><p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Claude-bearbeitete .json Datei hochladen.</p>
+<input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(this)" style="margin-bottom:1rem"><div id="importStatus" style="color:var(--dim);font-size:.85rem"></div>
+<div style="margin-top:1rem"><button onclick="closeImportModal()" class="btn btn-dim">Abbrechen</button></div></div></div>
+<div id="snapshotModal" class="modal" style="display:none"><div class="modal-content" style="max-width:550px"><div id="snapshotContent"></div>
+<div style="margin-top:1rem"><button onclick="closeModal('snapshotModal')" class="btn btn-dim">Schliessen</button></div></div></div>
+<div id="diffModal" class="modal" style="display:none"><div class="modal-content" style="max-width:700px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
+<div id="diffContent" style="overflow-y:auto;flex:1"></div></div></div>
+<div id="notifModal" class="modal" style="display:none"><div class="modal-content" style="max-width:550px"><div id="notifContent"></div>
+<div style="margin-top:1rem;display:flex;gap:.5rem"><button onclick="copyAllNotifs()" class="btn">📋 Alle kopieren</button><button onclick="closeModal('notifModal')" class="btn btn-dim">Schliessen</button></div></div></div>
+<div id="notifToast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:0.75rem 1.5rem;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
 </body>
 </html>
