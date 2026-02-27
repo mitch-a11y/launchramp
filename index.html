@@ -3698,19 +3698,20 @@ function restoreSnapshot(clientIndex, snapshotId) {
   var preserved = client._snapshots; Object.assign(client, snap.data); client._snapshots = preserved;
   save(); renderAll(); return true;
 }
-function openSnapshotModal() {
-  var client = DB.clients[DB.activeClient]; var snaps = client._snapshots || [];
-  var h = "<h3>🕐 Versionshistorie — " + esc(client.name) + "</h3>";
-  if (snaps.length === 0) { h += "<p style=\"color:var(--dim)\">Noch keine Snapshots. Werden automatisch vor jedem Import erstellt.</p>"; }
-  else { h += "<div class=\"snapshot-list\">"; snaps.forEach(function(snap) {
-    var d = new Date(snap.timestamp); var ds = formatDateDE(d) + ", " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
-    h += "<div class=\"snapshot-item\"><div><strong>📸 " + ds + "</strong><br><span style=\"color:var(--dim);font-size:0.85rem\">" + esc(snap.trigger) + "</span></div>";
-    h += "<div style=\"display:flex;gap:0.5rem\"><button onclick=\"if(confirm('Wiederherstellen? Aktueller Stand wird vorher als Backup gespeichert.'))restoreSnapshot(" + DB.activeClient + ",'" + snap.id + "')\" class=\"btn btn-sm\" style=\"background:var(--red)\">↩️ Wiederherstellen</button></div></div>";
-  }); h += "</div>"; }
-  document.getElementById("snapshotModal").querySelector(".modal-body").innerHTML = h;
-  openModal("snapshotModal");
-}
-function openImportModal() { document.getElementById("importFileInput").value = ""; document.getElementById("importModal").querySelector(".modal-body").innerHTML = "<h3>📥 Meeting-Update importieren</h3><p>JSON-Datei hochladen die von Claude erstellt wurde:</p><input type=\"file\" id=\"importFileInput\" accept=\".json\" onchange=\"handleImportFile(this)\" style=\"margin:1rem 0\"><div id=\"importStatus\"></div>"; openModal("importModal"); }
+window.openSnapshotModal=function(){var m=document.getElementById("snapshotModal");var mc=m.querySelector(".modal-content")||m.querySelector(".modal")||m;
+var snaps=JSON.parse(localStorage.getItem("lr-snapshots")||"[]");
+var h='<h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:var(--text)">Verlauf &amp; Snapshots</h3>';
+h+='<p style="font-size:12px;color:var(--text3);margin:0 0 16px">Speichere den aktuellen Stand und stelle frühere Versionen wieder her.</p>';
+h+='<button onclick="createSnapshot()" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border-radius:8px;border:1.5px dashed var(--border);background:transparent;color:var(--green);cursor:pointer;font-weight:700;font-size:13px;margin-bottom:14px;transition:border-color 0.2s" onmouseover="this.style.borderColor=\'var(--green)\'" onmouseout="this.style.borderColor=\'var(--border)\'">📸 Neuen Snapshot erstellen</button>';
+if(snaps.length===0){h+='<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Noch keine Snapshots vorhanden</div>'}
+else{h+='<div style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto">';snaps.slice().reverse().forEach(function(s,ri){var i=snaps.length-1-ri;var d=new Date(s.ts);var ds=d.toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"})+", "+d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;transition:background 0.15s" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'transparent\'">';
+h+='<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">'+esc(s.label||"Snapshot "+(i+1))+'</div><div style="font-size:11px;color:var(--text3)">'+ds+'</div></div>';
+h+='<button onclick="restoreSnapshot('+i+')" style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11px;font-weight:600">Wiederherstellen</button></div>'});h+='</div>'}
+h+='<div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px;margin-top:14px">';
+h+='<button onclick="document.getElementById(\'snapshotModal\').style.display=\'none\'" style="padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Schliessen</button></div>';
+mc.innerHTML=h;m.style.display="flex"};
+window.openImportModal=function(){var m=document.getElementById("importModal");var mc=m.querySelector(".modal-content")||m.querySelector(".modal")||m;var h='<h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:var(--text)">Meeting-Update importieren</h3>';h+='<p style="font-size:13px;color:var(--text3);margin:0 0 16px;line-height:1.5">JSON-Datei hochladen die von Claude erstellt wurde:</p>';h+='<label style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;border:2px dashed var(--border);border-radius:12px;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor=\'var(--green)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';h+='<span style="font-size:28px">📂</span>';h+='<span style="font-size:13px;color:var(--text2);font-weight:600">Datei auswählen oder hierher ziehen</span>';h+='<span style="font-size:11px;color:var(--text3)">.json Format</span>';h+='<input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(this)" style="display:none">';h+='</label>';h+='<div id="importStatus" style="margin-top:12px;font-size:12px;color:var(--text3)"></div>';h+='<div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px;margin-top:16px">';h+='<button onclick="document.getElementById(\'importModal\').style.display=\'none\'" style="padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Abbrechen</button>';h+='</div>';mc.innerHTML=h;m.style.display="flex"};
 function handleImportFile(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
@@ -3801,7 +3802,7 @@ function renderDiffReview(changes) {
   if (reds.length) { h += "<h4>🔴 Strukturelle Änderungen</h4>"; reds.forEach(function(c) { h += row(c, changes.indexOf(c)); }); }
   h += "<div style=\"display:flex;gap:1rem;margin-top:1.5rem\"><button onclick=\"applySelectedChanges()\" class=\"btn\" style=\"background:var(--green)\">💾 Ausgewählte übernehmen</button>";
   h += "<button onclick=\"closeModal('diffModal')\" class=\"btn\" style=\"background:var(--red)\">❌ Abbrechen</button></div>";
-  document.getElementById("diffModal").querySelector(".modal-body").innerHTML = h;
+  document.getElementById("diffModal").querySelector(".modal-content").innerHTML = h;
   openModal("diffModal");
 }
 function checkAllGreen() { document.querySelectorAll("#diffModal .diff-green input[type=checkbox]").forEach(function(cb) { cb.checked = true; }); }
@@ -3837,10 +3838,15 @@ function applySelectedChanges() {
   });
   save(); renderAll(); closeModal("diffModal");
   var notifs = generateNotifications(changes, indices);
-  if (notifs && notifs.length) { openNotifModal(notifs); }
-  else { showToast("✅ " + applied + " Änderungen übernommen"); }
-  window._pendingImport = null;
-}
+window.openNotifModal=function(){var m=document.getElementById("notifModal");var mc=m.querySelector(".modal-content")||m.querySelector(".modal")||m;
+var notifs=window.DB&&DB.notifications?DB.notifications:[];
+var h='<h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:var(--text)">Benachrichtigungen</h3>';
+h+='<p style="font-size:12px;color:var(--text3);margin:0 0 16px">Deadlines, Updates und Hinweise.</p>';
+if(!notifs||notifs.length===0){h+='<div style="text-align:center;padding:30px 10px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">✅</div><div style="font-size:13px">Keine offenen Benachrichtigungen</div></div>'}
+else{h+='<div style="display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto">';notifs.forEach(function(n,i){h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface2)"><div style="flex:1"><div style="font-size:13px;color:var(--text)">'+esc(n.text||n.message||"Hinweis")+'</div></div></div>'});h+='</div>'}
+h+='<div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px;margin-top:14px">';
+h+='<button onclick="document.getElementById(\'notifModal\').style.display=\'none\'" style="padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Schliessen</button></div>';
+mc.innerHTML=h;m.style.display="flex"};
 function generateNotifications(changes, appliedIndices) {
   var byOwner = {};
   appliedIndices.forEach(function(i) {
@@ -3881,7 +3887,7 @@ function openNotifModal(notifs) {
   h += "<div style=\"display:flex;gap:1rem;margin-top:1rem\"><button onclick=\"copyAllNotifs()\" class=\"btn btn-sm\">📋 Alle kopieren</button>";
   h += "<button onclick=\"closeModal('notifModal')\" class=\"btn btn-sm\">⏭️ Fertig</button></div>";
   window._notifData = notifs;
-  document.getElementById("notifModal").querySelector(".modal-body").innerHTML = h;
+  document.getElementById("notifModal").querySelector(".modal-content").innerHTML = h;
   openModal("notifModal");
 }
 function copyNotif(i) {
