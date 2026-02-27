@@ -3870,6 +3870,7 @@ function generateNotifications(changes, appliedIndices) {
   return result;
 }
 function openNotifModal(notifs) {
+    notifs = notifs || DB.notifications || [];
   var h = "<h3>ð¬ Team-Updates nach Import</h3>";
   notifs.forEach(function(n, i) {
     h += "<div style=\"margin:1rem 0;padding:1rem;background:var(--bg2);border-radius:8px\">";
