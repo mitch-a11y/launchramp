@@ -107,12 +107,21 @@ button,select,input,textarea{font-family:inherit}
 
 /* FILTERS */
 .filters-bar{padding:8px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.flabel{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-right:1px}
-.pill{padding:3px 9px;border-radius:14px;font-size:11px;font-weight:500;cursor:pointer;transition:var(--tr);border:1px solid var(--border);background:transparent;color:var(--text3)}
-.pill:hover{background:var(--surface2);color:var(--text2)}
-.pill.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:600}
-.search-box{margin-left:auto;border:1px solid var(--border);border-radius:16px;padding:4px 12px;font-size:12px;color:var(--text);background:var(--surface2);outline:none;width:180px;transition:var(--tr)}
-.search-box:focus{border-color:var(--accent);background:var(--surface);width:220px}
+.fdrop{position:relative;display:inline-block}
+.fdrop-trigger{padding:4px 10px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;transition:var(--tr);border:1px solid var(--border);background:transparent;color:var(--text3);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.fdrop-trigger:hover{background:var(--surface2);color:var(--text2)}
+.fdrop-trigger.has-selection{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+.fdrop-trigger .arrow{font-size:8px;margin-left:2px;transition:transform .2s}
+.fdrop-trigger.open .arrow{transform:rotate(180deg)}
+.fdrop-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:180px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:999;padding:6px;max-height:300px;overflow-y:auto}
+.fdrop-panel.open{display:block}
+.fdrop-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text2);transition:var(--tr)}
+.fdrop-item:hover{background:var(--surface2)}
+.fdrop-item.selected{color:var(--accent);font-weight:600}
+.fdrop-item .fcheck{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;transition:var(--tr)}
+.fdrop-item.selected .fcheck{background:var(--accent);border-color:var(--accent);color:#1a1a1a}
+.search-box{margin-left:auto;border:1px solid var(--border);border-radius:16px;padding:4px 14px;font-size:12px;background:var(--surface2);color:var(--text);outline:none;width:180px;transition:var(--tr)}
+.search-box:focus{border-color:var(--accent);width:220px}
 
 /* STATS */
 .stats-row{display:flex;gap:1px;padding:0;background:var(--border)}
@@ -472,7 +481,7 @@ button,select,input,textarea{font-family:inherit}
 .due-normal{background:var(--surface2);color:var(--dim)}
 .overdue-row{border-left:3px solid var(--red)!important}
 .due-input{background:var(--surface2);color:var(--txt);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;width:100%}
-.overdue-count{background:var(--red);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px}
+
 .team-view{padding:20px}
 .team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px}
 .team-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px}
@@ -566,22 +575,22 @@ button,select,input,textarea{font-family:inherit}
     </div>
 
     <div class="filters-bar" id="filtersBar">
-      <span class="flabel">Owner</span>
-      <button class="pill active" data-o="all" onclick="fOwner(this)">Alle</button>
-      <button class="pill" data-o="Mitch" onclick="fOwner(this)">Mitch</button>
-      <button class="pill" data-o="Max" onclick="fOwner(this)">Max</button>
-      <button class="pill" data-o="Hussein" onclick="fOwner(this)">Hussein</button>
-      <button class="pill" data-o="Tobie" onclick="fOwner(this)">Tobie</button>
-      <span class="flabel" style="margin-left:8px">Status</span>
-      <button class="pill active" data-s="all" onclick="fStatus(this)">Alle</button>
-      <button class="pill" data-s="Offen" onclick="fStatus(this)">Offen</button>
-      <button class="pill" data-s="In Arbeit" onclick="fStatus(this)">Aktiv</button>
-      <button class="pill" data-s="Warte auf Kunde" onclick="fStatus(this)">Wartend</button>
-      <span class="flabel" style="margin-left:8px">Overdue</span>
-      <button class="pill" onclick="fOverdue()">⚠️ Überfällig <span id="overdueCount" class="overdue-count"></span></button>
-      <button class="pill" data-s="Erledigt" onclick="fStatus(this)">Fertig</button>
-      <input type="text" class="search-box" id="searchBox" placeholder="Suchen..." oninput="applyFilters()">
+    <div class="fdrop" id="fdOwner">
+      <div class="fdrop-trigger" onclick="toggleFDrop('fdOwner')">
+        <span id="fdOwnerLabel">Owner</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="fdrop-panel" id="fdOwnerPanel"></div>
     </div>
+    <div class="fdrop" id="fdStatus">
+      <div class="fdrop-trigger" onclick="toggleFDrop('fdStatus')">
+        <span id="fdStatusLabel">Status</span>
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="fdrop-panel" id="fdStatusPanel"></div>
+    </div>
+    <input type="text" class="search-box" id="searchBox" placeholder="Suchen..." oninput="applyFilters()">
+  </div>
 
     <div class="stats-row" id="statsRow">
       <div class="stat-card"><div class="stat-num" id="sT">0</div><div class="stat-label">Tasks</div></div>
@@ -854,7 +863,7 @@ const DOCS=[
 // STATE
 // ============================================================
 let DB={clients:[],activeClient:null,activeProject:null};
-let isCV=false, curView='tasks', fO='all', fS='all';
+let isCV=false, curView='tasks';
 let dashboardActive=false;
 // Track open/closed state for phases and packages
 let openPhases=new Set();
@@ -2130,7 +2139,7 @@ function renderAll(){
   }else{
     dv.classList.remove('active');
     cv.classList.remove('hidden');
-    renderTopbar();renderStats();renderTasks();renderDocs();renderCountdown();renderMiniTimeline();applyFilters();
+    renderTopbar();renderStats();renderTasks();renderDocs();renderCountdown();renderMiniTimeline();renderFilterDropdowns();applyFilters();
     var tpl=document.getElementById('templatesView');if(tpl){tpl.style.display='none';tpl.classList.remove('active');}
     var sr=document.getElementById('statsRow');if(sr)sr.style.display='';
     var pb=document.getElementById('progressBar');if(pb)pb.style.display='';
@@ -2411,7 +2420,7 @@ function renderTasks(){
       let flatIdx=(function(){let n=0;for(let x=0;x<pai;x++)n+=phase.packages[x].tasks.length;return n})();
 
       pkg.tasks.forEach((task,ti)=>{
-        if(filterOverdue&&getDueClass(task)!=='due-overdue')return;
+        
         const id=`${pi}-${pai}-${ti}`;
         const st=c.states[id]||'Offen';
         const cc=st==='Erledigt'?'done':st==='In Arbeit'?'wip':st==='Warte auf Kunde'?'wait':'';
@@ -3105,13 +3114,87 @@ function toggleCV(){
 // ============================================================
 // FILTERS
 // ============================================================
-function fOwner(btn){btn.parentElement.querySelectorAll('[data-o]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');fO=btn.dataset.o;applyFilters()}
-function fStatus(btn){btn.parentElement.querySelectorAll('[data-s]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');fS=btn.dataset.s;applyFilters()}
+
+
+// Filter state: arrays for multi-select
+var fOwners = [];
+var fStatuses = [];
+
+function toggleFDrop(id){
+  const el=document.getElementById(id);
+  const panel=el.querySelector('.fdrop-panel');
+  const trigger=el.querySelector('.fdrop-trigger');
+  const isOpen=panel.classList.contains('open');
+  document.querySelectorAll('.fdrop-panel.open').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.fdrop-trigger.open').forEach(t=>t.classList.remove('open'));
+  if(!isOpen){
+    panel.classList.add('open');trigger.classList.add('open');
+    setTimeout(()=>{const close=function(e){if(!e.target.closest('.fdrop')){document.querySelectorAll('.fdrop-panel.open').forEach(p=>p.classList.remove('open'));document.querySelectorAll('.fdrop-trigger.open').forEach(t=>t.classList.remove('open'));document.removeEventListener('click',close);}};document.addEventListener('click',close);},10);
+  }
+}
+
+function toggleFilterItem(type,val){
+  const arr=type==='owner'?fOwners:fStatuses;
+  const idx=arr.indexOf(val);
+  if(idx>-1)arr.splice(idx,1);else arr.push(val);
+  renderFilterDropdowns();updateFilterUI();applyFilters();
+}
+
+function clearFilter(type){
+  if(type==='owner')fOwners=[];else fStatuses=[];
+  renderFilterDropdowns();updateFilterUI();applyFilters();
+}
+
+function updateFilterUI(){
+  const oLabel=document.getElementById('fdOwnerLabel');
+  const oTrig=oLabel?oLabel.closest('.fdrop-trigger'):null;
+  if(oLabel){oLabel.textContent=fOwners.length?'Owner: '+fOwners.join(', '):'Owner';if(oTrig)oTrig.classList.toggle('has-selection',fOwners.length>0);}
+  const sLabel=document.getElementById('fdStatusLabel');
+  const sTrig=sLabel?sLabel.closest('.fdrop-trigger'):null;
+  if(sLabel){
+    const names=fStatuses.map(v=>v==='In Arbeit'?'Aktiv':v==='Warte auf Kunde'?'Wartend':v==='overdue'?'\u00DCberf\u00E4llig':v==='Erledigt'?'Fertig':v);
+    sLabel.textContent=fStatuses.length?'Status: '+names.join(', '):'Status';
+    if(sTrig)sTrig.classList.toggle('has-selection',fStatuses.length>0);
+  }
+}
+
+function renderFilterDropdowns(){
+  const c=A();if(!c)return;
+  const owners=new Set();
+  c.phases.forEach(ph=>ph.areas.forEach(a=>a.tasks.forEach(t=>{if(t.owner)owners.add(t.owner);})));
+  const ownerList=[...owners].sort();
+  const oPanel=document.getElementById('fdOwnerPanel');
+  if(oPanel)oPanel.innerHTML='<div class="fdrop-item" onclick="clearFilter(\'owner\')" style="color:var(--text3);font-size:11px;font-style:italic">Alle Owner</div>'+ownerList.map(o=>'<div class="fdrop-item'+(fOwners.includes(o)?' selected':'')+'" data-fo="'+o+'" onclick="toggleFilterItem(\'owner\',\''+o+'\')" ><span class="fcheck">'+(fOwners.includes(o)?'\u2713':'')+'</span><span>'+o+'</span></div>').join('');
+  const statusOpts=[{val:'Offen',label:'Offen'},{val:'In Arbeit',label:'Aktiv'},{val:'Warte auf Kunde',label:'Wartend'},{val:'overdue',label:'\u26A0\uFE0F \u00DCberf\u00E4llig'},{val:'Erledigt',label:'Fertig'}];
+  const sPanel=document.getElementById('fdStatusPanel');
+  if(sPanel)sPanel.innerHTML='<div class="fdrop-item" onclick="clearFilter(\'status\')" style="color:var(--text3);font-size:11px;font-style:italic">Alle Status</div>'+statusOpts.map(o=>'<div class="fdrop-item'+(fStatuses.includes(o.val)?' selected':'')+'" data-fs="'+o.val+'" onclick="toggleFilterItem(\'status\',\''+o.val+'\')" ><span class="fcheck">'+(fStatuses.includes(o.val)?'\u2713':'')+'</span><span>'+o.label+'</span></div>').join('');
+}
+
 function applyFilters(){
-  const q=document.getElementById('searchBox').value.toLowerCase();
+  const q=document.getElementById('searchBox')?document.getElementById('searchBox').value.toLowerCase():'';
   document.querySelectorAll('.task-row').forEach(r=>{
-    const t=r.querySelector('.task-text').textContent.toLowerCase();
-    r.style.display=((!q||t.includes(q))&&(fO==='all'||r.dataset.owner===fO)&&(fS==='all'||r.dataset.status===fS))?'':'none';
+    const t=r.querySelector('.task-text')?r.querySelector('.task-text').textContent.toLowerCase():'';
+    const owner=r.dataset.owner||'';
+    const status=r.dataset.status||'';
+    const isOverdue=r.classList.contains('overdue-row');
+    let ownerOK=fOwners.length===0||fOwners.includes(owner);
+    let statusOK=true;
+    if(fStatuses.length>0){
+      const hasOD=fStatuses.includes('overdue');
+      const reg=fStatuses.filter(x=>x!=='overdue');
+      statusOK=(hasOD&&isOverdue)||(reg.length>0&&reg.includes(status));
+      if(!hasOD)statusOK=reg.includes(status);
+    }
+    r.style.display=((!q||t.includes(q))&&ownerOK&&statusOK)?'':'none';
+  });
+  const anyFilter=fOwners.length>0||fStatuses.length>0||q;
+  document.querySelectorAll('.phase-block').forEach(pb=>{
+    let vis=0;pb.querySelectorAll('.task-row').forEach(tr=>{if(tr.style.display!=='none')vis++;});
+    pb.style.display=anyFilter?(vis>0?'':'none'):'';
+  });
+  document.querySelectorAll('.wp-wrap').forEach(cg=>{
+    let vis=0;cg.querySelectorAll('.task-row').forEach(tr=>{if(tr.style.display!=='none')vis++;});
+    cg.style.display=anyFilter?(vis>0?'':'none'):'';
   });
 }
 
@@ -3484,13 +3567,13 @@ if(firstClient&&firstClient.phases[0]){
 }
 renderAll();
 // === M7: Due-Dates + Overdue ===
-var filterOverdue=false;
+
 function getDueClass(task){if(!task.due)return'';const now=new Date();now.setHours(0,0,0,0);const d=new Date(task.due);d.setHours(0,0,0,0);const diff=(d-now)/86400000;if(diff<0)return'due-overdue';if(diff===0)return'due-today';if(diff<=3)return'due-soon';return'due-normal';}
 function getDueBadge(task){if(!task.due)return'';const cls=getDueClass(task);const d=new Date(task.due);const fmt=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});return' <span class="due-badge '+cls+'">'+fmt+'</span>';}
 function getOverdueDays(task){if(!task.due)return 0;const now=new Date();now.setHours(0,0,0,0);const d=new Date(task.due);d.setHours(0,0,0,0);return Math.max(0,Math.floor((now-d)/86400000));}
 function countOverdue(){let c=0;const p=A();if(!p)return 0;const st=p.states||{};p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{const key=pi+'-'+ki+'-'+ti;if(!st[key]&&getDueClass(t)==='due-overdue')c++;});});});return c;}
 function updateOverdueBadge(){const el=document.getElementById('overdueCount');if(el){const c=countOverdue();el.textContent=c>0?c:'';}}
-function fOverdue(){filterOverdue=!filterOverdue;renderTasks();}
+
 var teamRoles=JSON.parse(localStorage.getItem('launchramp_teamRoles')||'{}');
 function getTeamRoles(){return teamRoles;}
 function setTeamRole(name,role){teamRoles[name]=role;localStorage.setItem('launchramp_teamRoles',JSON.stringify(teamRoles));}
