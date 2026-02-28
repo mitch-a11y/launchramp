@@ -296,7 +296,7 @@ let tt=0,dd=0;
         <div class="phase-left">
           <span class="drag-handle" title="Phase verschieben" onmousedown="event.stopPropagation()">⠿</span>
           <span class="ph-chev${pOpen?' open':''}" id="pc${pi}">▶</span>
-          <span class="ph-tag" style="background:${phaseBarInfo.color}18;color:${phaseBarInfo.color}">${phase.id}</span>
+          <span class="ph-tag" style="background:${phaseBarInfo.color}18;color:${phaseBarInfo.color}">${phase.id||''}</span>
           <span class="ph-name">${esc(phase.name)}</span>${phaseTimeHtml}
           ${phaseBarInfo.icon?`<span style="font-size:10px;margin-left:4px">${phaseBarInfo.icon}</span>`:''}
         </div>
