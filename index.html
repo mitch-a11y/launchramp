@@ -1003,7 +1003,11 @@ function load(){
   // Phase 2: Async load from Supabase (overrides localStorage if newer)
   loadFromSupabase();
 }
-function save(){localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()}
+function save(){
+try{
+localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()
+}catch(e){console.warn("[save Error]",e);toast("Fehler in save: "+e.message,"error");}
+}
 
 
 // ============================================================
@@ -2156,6 +2160,8 @@ function toggleProjectComplete(){
 // RENDER ALL
 // ============================================================
 function renderAll(){
+try{
+
   renderSidebar();
   const dv=document.getElementById('dashboardView');
   const cv=document.getElementById('clientView');
@@ -2173,6 +2179,8 @@ function renderAll(){
     var sr=document.getElementById('statsRow');if(sr)sr.style.display='';
     var pb=document.getElementById('progressBar');if(pb)pb.style.display='';
   }
+
+}catch(e){console.warn("[renderAll Error]",e);toast("Fehler in renderAll: "+e.message,"error");}
 }
 
 function renderSidebar(){
