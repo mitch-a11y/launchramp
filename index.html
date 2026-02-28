@@ -718,6 +718,9 @@ button,select,input,textarea{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
+var DEBUG=false;
+function dbg(){if(DEBUG)console.log.apply(console,arguments);}
+
 
 // ============================================================
 // SUPABASE CONFIG
@@ -733,7 +736,7 @@ let lastKnownRemote = null; // Baseline for conflict detection
 // Initialize Supabase
 try {
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('[LaunchRamp] Supabase connected');
+  dbg('[LaunchRamp] Supabase connected');
 } catch(e) {
   console.warn('[LaunchRamp] Supabase init failed, using localStorage only:', e);
   isOnline = false;
@@ -1151,7 +1154,7 @@ async function loadFromSupabase(){
       const remoteStr=JSON.stringify(data.data);
       const localStr=JSON.stringify({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
       if(remoteStr!==localStr){
-        console.log('[Supabase] Remote data loaded, updating local');
+        dbg('[Supabase] Remote data loaded, updating local');
         lastRemoteUpdate=data.updated_at;
         DB.clients=data.data.clients||[];
         DB.activeClient=data.data.activeClient||null;
@@ -1177,7 +1180,7 @@ async function loadFromSupabase(){
       // Store baseline for future merge
       lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
     } else if(DB.clients.length>0){
-      console.log('[Supabase] Remote empty, pushing local data');
+      dbg('[Supabase] Remote empty, pushing local data');
       lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
       await saveToSupabaseDirect();
     }
@@ -1208,7 +1211,7 @@ function saveToSupabase(){
           const baseStr=JSON.stringify(lastKnownRemote);
           if(remoteStr!==baseStr){
             // Remote changed since we last loaded -> MERGE
-            console.log('[Supabase] Conflict detected, merging...');
+            dbg('[Supabase] Conflict detected, merging...');
             const mergedClients = mergeClients(localPayload.clients, currentRemote.data.clients||[], lastKnownRemote.clients||[]);
             localPayload.clients = mergedClients;
             // Update local DB with merged data
@@ -1224,7 +1227,7 @@ function saveToSupabase(){
       const{error}=await sbClient.from('app_state').update({data:localPayload,updated_by:navigator.userAgent.substring(0,50)}).eq('id','main');
       if(error){console.warn('[Supabase] Save error:',error);updateSyncStatus('error')}
       else{
-        console.log('[Supabase] Saved');
+        dbg('[Supabase] Saved');
         updateSyncStatus('synced');
         lastRemoteUpdate=new Date().toISOString();
         lastKnownRemote=deepClone(localPayload);
@@ -1623,7 +1626,7 @@ async function migrateDefaultTemplates(){
     headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
     body:JSON.stringify(templates)
   });
-  if(r.ok){ tplCache=templates; console.log("Migrated",templates.length,"templates"); }
+  if(r.ok){ tplCache=templates; dbg("Migrated",templates.length,"templates"); }
   else{ console.warn("Migration error",r.status); tplCache=[]; }
 }
 }
@@ -1804,7 +1807,7 @@ function setupRealtimeSubscription(){
   realtimeChannel=sbClient.channel('app_state_changes')
   .on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{
     if(syncInProgress)return;
-    console.log('[Supabase] Realtime update received');
+    dbg('[Supabase] Realtime update received');
     const newData=payload.new.data;
     if(newData&&newData.clients){
       // Merge instead of overwrite
@@ -1827,7 +1830,7 @@ function setupRealtimeSubscription(){
     }
   })
   .subscribe((status)=>{
-    console.log('[Supabase] Realtime status:',status);
+    dbg('[Supabase] Realtime status:',status);
     if(status==='SUBSCRIBED')updateSyncStatus('synced');
   });
 }
