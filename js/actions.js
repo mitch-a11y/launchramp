@@ -1843,3 +1843,14 @@ function runSmokeTests(){
 Bus.on('data:changed', function() { Bus.emit('data:changed'); });
 Bus.on('tasks:changed', function() { Bus.emit('tasks:changed'); });
 Bus.on('docs:changed', function() { Bus.emit('docs:changed'); });
+
+// === INIT (moved from config.js – runs after all scripts loaded) ===
+// INIT
+load();
+// Auto-open first phase and all its packages
+openPhases.add(0);
+const firstClient=getActiveClient();
+if(firstClient&&firstClient.phases[0]){
+  firstClient.phases[0].packages.forEach((_,pai)=>openPackages.add(`0_${pai}`));
+}
+renderAll();
