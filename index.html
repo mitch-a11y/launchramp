@@ -6,13 +6,13 @@
 <title>LaunchRamp</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
-<div class="sync-wrap" onclick="toggleActivityPanel()" style="position:fixed;bottom:12px;right:12px;z-index:9999"><div id="syncStatus" style="font-size:14px;padding:4px 10px;border-radius:8px;background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);cursor:pointer;opacity:0.7;transition:opacity 0.2s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Klick fÃÂÃÂ¼r Activity Feed"></div></div>
+<div class="sync-wrap" onclick="toggleActivityPanel()" style="position:fixed;bottom:12px;right:12px;z-index:9999"><div id="syncStatus" style="font-size:14px;padding:4px 10px;border-radius:8px;background:var(--surface2,#1e1e1e);border:1px solid var(--border,#333);cursor:pointer;opacity:0.7;transition:opacity 0.2s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Klick für Activity Feed"></div></div>
 <div id="activityPanel" class="activity-panel">
-  <div class="activity-panel-header"><h3>ÃÂ°ÃÂÃÂÃÂ Activity Feed</h3><button class="activity-panel-close" onclick="toggleActivityPanel()">ÃÂ¢ÃÂÃÂ</button></div>
-  <div id="activityList" class="activity-list"><div class="activity-empty">Keine AktivitÃÂÃÂ¤ten</div></div>
+  <div class="activity-panel-header"><h3>📋 Activity Feed</h3><button class="activity-panel-close" onclick="toggleActivityPanel()">✕</button></div>
+  <div id="activityList" class="activity-list"><div class="activity-empty">Keine Aktivitäten</div></div>
 </div>
 
 <div class="app">
@@ -23,7 +23,7 @@
         <div><h1>LaunchRamp</h1><span>by Digital Sun</span></div>
       </div>
       <button class="new-client-btn" onclick="addClient()">+ Neuer Kunde</button>
-      <button class="templates-btn" onclick="showTemplates()" style="width:100%;padding:7px 12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;margin-top:6px;display:flex;align-items:center;gap:6px;justify-content:center;transition:var(--tr)">ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ Templates</button>
+      <button class="templates-btn" onclick="showTemplates()" style="width:100%;padding:7px 12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;margin-top:6px;display:flex;align-items:center;gap:6px;justify-content:center;transition:var(--tr)">⚙️ Templates</button>
     </div>
     <div class="client-list" id="clientList"></div>
     <div class="sidebar-footer">LaunchRamp v5.0</div>
@@ -42,16 +42,16 @@
         </div>
       <div class="topbar-actions" style="position:relative">
         <div class="link-trigger" id="linkTrigger" onclick="toggleLinkPanel()">
-          <span>ÃÂ°ÃÂÃÂÃÂ</span>
+          <span>🔗</span>
           <span>Links</span>
           <span class="link-count" id="linkCount">0</span>
         </div>
         <div class="link-panel" id="linkPanel"></div>
-    <button class="export-btn" onclick="undo()" title="RÃÂÃÂ¼ckgÃÂÃÂ¤ngig (Ctrl+Z)" style="position:relative">ÃÂ¢ÃÂÃÂ© Undo<span id="undoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
-    <button class="export-btn" onclick="redo()" title="Wiederholen (Ctrl+Y)" style="position:relative">ÃÂ¢ÃÂÃÂª Redo<span id="redoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--blue);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
-      <button class="export-btn" onclick="openExportModal()" title="Projektstand exportieren">ÃÂ°ÃÂÃÂÃÂ Export</button>
-      <button class="import-btn" onclick="openImportModal()" title="Meeting-Update importieren">ÃÂ°ÃÂÃÂÃÂ¥ Import</button>
-      <button class="snapshot-btn" onclick="openSnapshotModal()" title="Versionshistorie">ÃÂ°ÃÂÃÂÃÂ Verlauf</button>
+    <button class="export-btn" onclick="undo()" title="Rückgängig (Ctrl+Z)" style="position:relative">↩ Undo<span id="undoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
+    <button class="export-btn" onclick="redo()" title="Wiederholen (Ctrl+Y)" style="position:relative">↪ Redo<span id="redoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--blue);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
+      <button class="export-btn" onclick="openExportModal()" title="Projektstand exportieren">📋 Export</button>
+      <button class="import-btn" onclick="openImportModal()" title="Meeting-Update importieren">📥 Import</button>
+      <button class="snapshot-btn" onclick="openSnapshotModal()" title="Versionshistorie">🕐 Verlauf</button>
       </div>
     </div>
 
@@ -62,15 +62,15 @@
       <label>Launch:</label>
       <input type="date" id="launchDate" onchange="getActiveClient().launchDate=this.value;save();renderCountdown();renderMiniTimeline()">
       <span class="countdown" id="countdown"></span>
-      <button class="btn sm" onclick="recalcDeadlines()" title="Deadlines automatisch berechnen">ÃÂ¢ÃÂÃÂ¡ Auto</button>
+      <button class="btn sm" onclick="recalcDeadlines()" title="Deadlines automatisch berechnen">⚡ Auto</button>
     </div>
 
     <div class="view-tabs">
       <div class="vtab active" onclick="setView('tasks',this)">Aufgaben</div>
       <div class="vtab" onclick="setView('docs',this)">Dokumente</div>
       
-<div class="vtab" onclick="setView('insights',this)">ÃÂ°ÃÂÃÂÃÂ Insights</div>
-<div class="vtab" onclick="setView('team',this)">ÃÂ°ÃÂÃÂÃÂ¥ Team</div>
+<div class="vtab" onclick="setView('insights',this)">📊 Insights</div>
+<div class="vtab" onclick="setView('team',this)">👥 Team</div>
 
 
     </div>
@@ -124,14 +124,14 @@
     <div class="mf-row">
       <div class="mf"><label>Owner</label><select id="tmOwner"><option>Mitch</option><option>Max</option><option>Hussein</option><option>Tobie</option><option>Team</option><option>Kunde</option></select></div>
       <div class="mf"><label>Aufwand (Min)</label><input type="number" id="tmMin" value="30" min="5" step="5"></div>
-      <label style="margin-top:8px;font-size:.85rem;color:var(--dim)">FÃÂÃÂ¤llig</label>
+      <label style="margin-top:8px;font-size:.85rem;color:var(--dim)">Fällig</label>
       <input type="date" id="tmDue" style="width:100%;padding:8px;border-radius:8px;background:var(--surface2);color:var(--txt);border:1px solid var(--border)">
     </div>
-  <details class="notes-toggle"><summary>ÃÂ°ÃÂÃÂÃÂ Notizen</summary><textarea id="tmNotes" rows="2" placeholder="Interne Notizen zum Task..."></textarea></details>
+  <details class="notes-toggle"><summary>📝 Notizen</summary><textarea id="tmNotes" rows="2" placeholder="Interne Notizen zum Task..."></textarea></details>
     <div class="mf"><label>Voraussetzung</label><input id="tmVor" placeholder="Optional..."></div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('taskModal')">Abbrechen</button>
-      <button class="btn danger" id="tmDel" onclick="deleteTask()" style="display:none">LÃÂÃÂ¶schen</button>
+      <button class="btn danger" id="tmDel" onclick="deleteTask()" style="display:none">Löschen</button>
       <button class="btn primary" onclick="saveTask()">Speichern</button>
     </div>
   </div>
@@ -148,7 +148,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('phaseModal')">Abbrechen</button>
-      <button class="btn danger" id="pmDel" onclick="deletePhase()" style="display:none">LÃÂÃÂ¶schen</button>
+      <button class="btn danger" id="pmDel" onclick="deletePhase()" style="display:none">Löschen</button>
       <button class="btn primary" onclick="savePhase()">Speichern</button>
     </div>
   </div>
@@ -185,27 +185,27 @@
 
 <!-- CONTEXT MENU -->
 <div class="ctx-menu" id="ctxMenu">
-  <div class="ctx-item" onclick="ctxEdit()">ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ Bearbeiten</div>
-  <div class="ctx-item" onclick="ctxDuplicate()">ÃÂ°ÃÂÃÂÃÂ Duplizieren</div>
-  <div class="ctx-item" onclick="ctxCal()">ÃÂ°ÃÂÃÂÃÂ Termin blocken</div>
-  <div class="ctx-item" onclick="ctxLogTime()">ÃÂ¢ÃÂÃÂ± Zeit eintragen</div>
-  <div class="ctx-item danger" onclick="ctxDelete()">ÃÂ°ÃÂÃÂÃÂÃÂ¯ÃÂ¸ÃÂ LÃÂÃÂ¶schen</div>
+  <div class="ctx-item" onclick="ctxEdit()">✏️ Bearbeiten</div>
+  <div class="ctx-item" onclick="ctxDuplicate()">📋 Duplizieren</div>
+  <div class="ctx-item" onclick="ctxCal()">📅 Termin blocken</div>
+  <div class="ctx-item" onclick="ctxLogTime()">⏱ Zeit eintragen</div>
+  <div class="ctx-item danger" onclick="ctxDelete()">🗑️ Löschen</div>
 </div>
 
 <div class="toast" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js?v=9"></script>
-<script src="js/data.js?v=9"></script>
-<script src="js/render.js?v=9"></script>
-<script src="js/actions.js?v=9"></script>
+<script src="js/config.js?v=10"></script>
+<script src="js/data.js?v=10"></script>
+<script src="js/render.js?v=10"></script>
+<script src="js/actions.js?v=10"></script>
 
 <!-- M10 Modals -->
 <div id="exportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:480px">
-<h3>ÃÂ°ÃÂÃÂÃÂ Projektstand exportieren</h3><div id="exportClientList" class="export-client-list"></div>
-<div style="display:flex;gap:.5rem;margin-top:1rem"><button onclick="doExport('md')" class="btn">ÃÂ°ÃÂÃÂÃÂ¥ .md</button><button onclick="doExport('json')" class="btn">ÃÂ°ÃÂÃÂÃÂ¥ .json</button><button onclick="closeExportModal()" class="btn btn-dim">Abbrechen</button></div>
+<h3>📋 Projektstand exportieren</h3><div id="exportClientList" class="export-client-list"></div>
+<div style="display:flex;gap:.5rem;margin-top:1rem"><button onclick="doExport('md')" class="btn">📥 .md</button><button onclick="doExport('json')" class="btn">📥 .json</button><button onclick="closeExportModal()" class="btn btn-dim">Abbrechen</button></div>
 </div></div></div>
 <div id="importModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:500px">
-<h3>ÃÂ°ÃÂÃÂÃÂ¥ Meeting-Update importieren</h3><p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Claude-bearbeitete .json Datei hochladen.</p>
+<h3>📥 Meeting-Update importieren</h3><p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Claude-bearbeitete .json Datei hochladen.</p>
 <input type="file" id="importFileInput" accept=".json" onchange="handleImportFile(this)" style="margin-bottom:1rem"><div id="importStatus" style="color:var(--dim);font-size:.85rem"></div>
 <div style="margin-top:1rem"><button onclick="closeImportModal()" class="btn btn-dim">Abbrechen</button></div></div></div></div>
 <div id="snapshotModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:550px"><div id="snapshotContent"></div>
@@ -213,7 +213,7 @@
 <div id="diffModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:700px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
 <div id="diffContent" style="overflow-y:auto;flex:1"></div></div></div></div>
 <div id="notifModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:550px"><div id="notifContent"></div>
-<div style="margin-top:1rem;display:flex;gap:.5rem"><button onclick="copyAllNotifs()" class="btn">ÃÂ°ÃÂÃÂÃÂ Alle kopieren</button><button onclick="closeModal('notifModal')" class="btn btn-dim">Schliessen</button></div></div></div></div>
+<div style="margin-top:1rem;display:flex;gap:.5rem"><button onclick="copyAllNotifs()" class="btn">📋 Alle kopieren</button><button onclick="closeModal('notifModal')" class="btn btn-dim">Schliessen</button></div></div></div></div>
 <div id="notifToast" style="display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:0.75rem 1.5rem;border-radius:8px;z-index:10000;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.3)"></div>
 </body>
 </html>
