@@ -196,6 +196,7 @@ function piBar(ist, plan){
 }
 
 function assignOwnerFromInsights(owner,path){
+  pushUndo('Owner zugewiesen');
   if(!owner)return;
   var parts=path.split('_');
   var pi=parseInt(parts[0]),pki=parseInt(parts[1]),ti=parseInt(parts[2]);
@@ -373,6 +374,7 @@ function selectTpl(which){
   if(rc)rc.style.display=which==='retainer'?'block':'none';
 }
 function confirmNewClient(btn){
+  pushUndo('Neuer Kunde');
   const m=btn.closest('.modal-overlay');
   const name=document.getElementById('newClientName').value.trim();
   if(!name){toast('Bitte Name eingeben');return}
@@ -435,6 +437,7 @@ function addProject(clientId){
   setTimeout(()=>document.getElementById('newProjName').focus(),50);
 }
 function confirmNewProject(clientId,btn){
+  pushUndo('Neues Projekt');
   const m=btn.closest('.modal-overlay');
   const client=DB.clients.find(c=>c.id===clientId);
   if(!client)return;
@@ -475,6 +478,7 @@ function confirmNewProject(clientId,btn){
 
 // Duplicate retainer for next month
 function duplicateRetainer(projId){
+  pushUndo('Retainer dupliziert');
   const client=AC();if(!client)return;
   const src=client.projects.find(p=>p.id===projId);
   if(!src)return;
@@ -506,6 +510,7 @@ function duplicateRetainer(projId){
 }
 
 function switchClient(id){
+  pushUndo('Kunde gewechselt');
   const client=DB.clients.find(c=>c.id===id);
   if(!client)return;
   DB.activeClient=id;
@@ -516,6 +521,7 @@ function switchClient(id){
   dashboardActive=false;save();renderAll();
 }
 function switchProject(clientId,projId,e){
+  pushUndo('Projekt gewechselt');
   if(e)e.stopPropagation();
   DB.activeClient=clientId;DB.activeProject=projId;
   dashboardActive=false;save();renderAll();
@@ -526,8 +532,10 @@ function toggleClientExpand(id,e){
   renderSidebar();
 }
 function delClient(id,e){e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}save();renderAll();toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();save();renderAll();}
+  pushUndo('Kunde gel\u00f6scht');
 
 function delProject(clientId,projId,e){
+  pushUndo('Projekt gel\u00f6scht');
   e.stopPropagation();
   const client=DB.clients.find(c=>c.id===clientId);
   if(!client||client.projects.length<=1)return toast('Mind. 1 Projekt pro Kunde');
@@ -538,6 +546,7 @@ function delProject(clientId,projId,e){
 }
 function showDashboard(){dashboardActive=true;renderAll()}
 function toggleProjectComplete(){
+  pushUndo('Projekt-Status');
   const p=getActiveClient();if(!p)return;
   p.completed=!p.completed;save();renderAll();
   toast(p.completed?'Projekt abgeschlossen':'Projekt reaktiviert');
@@ -550,6 +559,7 @@ function projectPct(proj){let t=0,d=0;proj.phases.forEach((p,pi)=>p.packages.for
 function clientPct(c){let t=0,d=0;(c.projects||[]).forEach(proj=>{proj.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++})))});return t?Math.round(d/t*100):0}
 
 function editQuickLink(key){
+  pushUndo('Link bearbeitet');
   const c=getActiveClient();if(!c.quickLinks)c.quickLinks={homepage:'',instagram:'',linkedin:'',gdrive:'',claude:''};
   if(key.startsWith('custom_')){
     const idx=parseInt(key.split('_')[1]);
@@ -575,6 +585,7 @@ function toggleLinkPanel(){
   }
 }
 function addCustomLink(){
+  pushUndo('Link hinzugef\u00fcgt');
   const c=getActiveClient();if(!c.customLinks)c.customLinks=[];
   const label=prompt('Link-Name (z.B. Trello, Figma, Notion):');
   if(!label||!label.trim())return;
@@ -585,8 +596,10 @@ function addCustomLink(){
 }
 function editTitle(){const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput');i.value=getActiveClient().name;s.style.display='none';i.style.display='inline-block';i.focus();i.select()}
 function saveTitle(){const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput'),v=i.value.trim()||'Projekt';s.style.display='';i.style.display='none';getActiveClient().name=v;save();renderAll()}
+  pushUndo('Titel gespeichert');
 
 function setProjectStart(val){
+  pushUndo('Startdatum gesetzt');
   const c=getActiveClient();
   c.startDate=val;
   save();renderAll();renderMiniTimeline();
@@ -594,6 +607,7 @@ function setProjectStart(val){
 }
 
 function recalcDeadlines(){
+  pushUndo('Deadlines berechnet');
   const c=getActiveClient();
   const start=c.startDate?new Date(c.startDate):new Date();
   let cursor=new Date(start);
@@ -643,6 +657,7 @@ var c=getActiveClient();if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);p
 
 // Package (Kategorie) Management
 function openAddPackage(pi){
+  pushUndo('Kategorie hinzugef\u00fcgt');
   const name=prompt('Name der neuen Kategorie:');
   if(!name||!name.trim())return;
   const c=getActiveClient();
@@ -656,6 +671,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   renderTasks();applyFilters();
 }
 function renamePackage(pi,pai){
+  pushUndo('Kategorie umbenannt');
   const c=getActiveClient();
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   const name=prompt('Kategorie umbenennen:',c.phases[pi].packages[pai].name);
@@ -664,6 +680,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phase
   save();renderTasks();applyFilters();toast('Kategorie umbenannt');
 }
 function deletePackage(pi,pai){
+  pushUndo('Kategorie gel\u00f6scht');
   if(!confirm('Kategorie und alle enthaltenen Aufgaben löschen?'))return;
   getActiveClient().phases[pi].packages.splice(pai,1);
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
@@ -687,6 +704,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(getActiveClient(),pi);}
 }
 function dragPhaseLeave(e){e.currentTarget.classList.remove('drag-over-top','drag-over-bot')}
 function dropPhase(e,targetPI){
+  pushUndo('Phase verschoben');
   e.preventDefault();
 if(typeof targetPI==="string"){targetPI=resolvePhaseIdx(getActiveClient(),targetPI);}
   if(dragPI===null||dragPI===targetPI)return;
@@ -749,6 +767,7 @@ var c=getActiveClient();if(typeof targetPI==="string"){var _pi=resolvePhaseIdx(c
 // AUTO-RECALC AFTER REORDER
 // ============================================================
 function autoRecalcAfterReorder(c){
+  pushUndo('Phasen neu sortiert');
   if(!c.startDate)return;
   const start=new Date(c.startDate);
   let cursor=new Date(start);
@@ -775,6 +794,7 @@ function autoRecalcAfterReorder(c){
 // MANUAL DEADLINE EDIT
 // ============================================================
 function editDeadline(pi,pai,ti,evt){
+  pushUndo('Deadline ge\u00e4ndert');
   const c=getActiveClient();const task=c.phases[pi].packages[pai].tasks[ti];
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const phase=c.phases[pi];
@@ -805,8 +825,11 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
 function cycle(id){const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+  pushUndo('Status ge\u00e4ndert');
 function setSt(id,v){var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
+  pushUndo('Status gesetzt');
 function setOwner(pi,pai,ti,sel){const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
+  pushUndo('Owner ge\u00e4ndert');
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
 
 // ============================================================
@@ -841,6 +864,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   openModal('taskModal');
 }
 function saveTask(){
+  pushUndo('Task gespeichert');
   if(!taskCtx)return;
   const name=document.getElementById('tmName').value.trim();
   if(!name)return;
@@ -862,6 +886,7 @@ function saveTask(){
   save();closeModal('taskModal');taskCtx=null;renderAll();
 }
 function deleteTask(){
+  pushUndo('Task gel\u00f6scht');
   if(!taskCtx||taskCtx.mode!=='edit')return;
   if(!confirm('Task löschen?'))return;
   const c=getActiveClient();
@@ -906,6 +931,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   openModal('phaseModal');
 }
 function savePhase(){
+  pushUndo('Phase gespeichert');
   if(!phaseCtx)return;
   const name=document.getElementById('pmName').value.trim();
   if(!name)return;
@@ -933,6 +959,7 @@ function savePhase(){
   save();closeModal('phaseModal');phaseCtx=null;renderAll();
 }
 function deletePhase(){
+  pushUndo('Phase gel\u00f6scht');
   if(!phaseCtx||phaseCtx.mode!=='edit')return;
   if(!confirm('Phase und alle Tasks löschen?'))return;
   const c=getActiveClient();c.phases.splice(phaseCtx.pi,1);
@@ -942,6 +969,7 @@ function deletePhase(){
 }
 
 function editTaskLink(pi,pai,ti,type){
+  pushUndo('Task-Link bearbeitet');
   const c=getActiveClient();
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const task=c.phases[pi].packages[pai].tasks[ti];
@@ -956,6 +984,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
 }
 
 function editTaskTime(pi,pai,ti){
+  pushUndo('Task-Zeit ge\u00e4ndert');
   const c=getActiveClient();
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const task=c.phases[pi].packages[pai].tasks[ti];
@@ -1017,6 +1046,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   m.querySelector('#zbMins').addEventListener('input',updatePreview);
 }
 function confirmZeitblock(pi,pai,ti,btn){
+  pushUndo('Zeitblock gesetzt');
   const c=getActiveClient();const task=c.phases[pi].packages[pai].tasks[ti];
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const date=document.getElementById('zbDate').value;
@@ -1039,12 +1069,14 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   toast('Zeitblock geplant ✓');
 }
 function removeScheduled(pi,pai,ti,btn){
+  pushUndo('Zeitblock entfernt');
   const c=getActiveClient();delete c.phases[pi].packages[pai].tasks[ti].scheduled;
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   save();btn.closest('.modal-overlay').remove();renderAll();toast('Zeitblock entfernt');
 }
 
 function duplicatePhase(pi){
+  pushUndo('Phase dupliziert');
   const c=getActiveClient();
 if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   const orig=c.phases[pi];
@@ -1067,6 +1099,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   toast('Phase dupliziert');
 }
 function deletePhaseInline(pi){
+  pushUndo('Phase gel\u00f6scht');
   const c=getActiveClient();
 if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   const phaseName=c.phases[pi]?c.phases[pi].name:'Phase';
@@ -1095,6 +1128,7 @@ if(typeof pi==="string"){var c=getActiveClient();var _pi=resolvePhaseIdx(c,pi);v
 function ctxHide(){document.getElementById('ctxMenu').classList.remove('show');ctxData=null}
 function ctxEdit(){if(!ctxData)return;editTask(ctxData.pi,ctxData.pai,ctxData.ti);ctxHide()}
 function ctxDuplicate(){
+  pushUndo('Task dupliziert');
   if(!ctxData)return;
   const c=getActiveClient(),t=c.phases[ctxData.pi].packages[ctxData.pai].tasks[ctxData.ti];
   c.phases[ctxData.pi].packages[ctxData.pai].tasks.splice(ctxData.ti+1,0,JSON.parse(JSON.stringify(t)));
@@ -1110,6 +1144,7 @@ function ctxLogTime(){
   addManualTime(ctxData.id);ctxHide();
 }
 function ctxDelete(){
+  pushUndo('Task gel\u00f6scht');
   if(!ctxData)return;
   if(!confirm('Task löschen?'))return;
   getActiveClient().phases[ctxData.pi].packages[ctxData.pai].tasks.splice(ctxData.ti,1);
@@ -1134,7 +1169,9 @@ function saveJFLink(){/* legacy – no longer used */}
 let curDocId=null;
 function editLink(id,name){curDocId=id;document.getElementById('linkName').textContent=name;document.getElementById('linkUrl').value=getActiveClient().docLinks[id]||'';openModal('linkModal')}
 function saveLink(){if(!curDocId)return;const u=document.getElementById('linkUrl').value.trim();if(u)getActiveClient().docLinks[curDocId]=u;save();closeModal('linkModal');renderDocs();toast('Link gespeichert')}
+  pushUndo('Dok-Link gespeichert');
 function removeLink(){if(!curDocId)return;delete getActiveClient().docLinks[curDocId];save();closeModal('linkModal');renderDocs()}
+  pushUndo('Dok-Link entfernt');
 function openDocLink(id){const u=getActiveClient().docLinks[id];if(u)window.open(u,'_blank');else toast('Noch kein Link konfiguriert')}
 
 // ============================================================
@@ -1295,6 +1332,7 @@ function setupJourfix(){
   document.body.appendChild(el);
 }
 function confirmJourfix(btn){
+  pushUndo('Jourfix gespeichert');
   const c=getActiveClient();
   const day=parseInt(document.getElementById('jfDay').value);
   const time=document.getElementById('jfTime').value||'15:00';
@@ -1344,6 +1382,7 @@ function nextWeekday(targetDay){
   return d;
 }
 function editJFLink(){
+  pushUndo('Jourfix-Link bearbeitet');
   const c=getActiveClient();if(!c.jourfix)return;
   const cur=c.jourfix.meetLink||'';
   const v=prompt('Meeting-Link:',cur);
@@ -1352,6 +1391,7 @@ function editJFLink(){
   toast(v.trim()?'Meeting-Link gespeichert':'Meeting-Link entfernt');
 }
 function removeJourfix(btn){
+  pushUndo('Jourfix entfernt');
   if(!confirm('Jourfix wirklich entfernen?'))return;
   getActiveClient().jourfix={};save();
   btn.closest('div[style*=fixed]').remove();
@@ -1367,6 +1407,7 @@ function getTrackedMins(c,taskId){
 }
 let timerInterval=null;
 function toggleTimer(taskId,evt){
+  pushUndo('Timer');
   evt.stopPropagation();
   const c=getActiveClient();
   if(!c.timeLog)c.timeLog=[];
@@ -1409,6 +1450,7 @@ function toggleTimer(taskId,evt){
   }
 }
 function addManualTime(taskId){
+  pushUndo('Zeit hinzugef\u00fcgt');
   const c=getActiveClient();
   if(!c.timeLog)c.timeLog=[];
   const val=prompt('Minuten nachträglich eintragen:','30');
@@ -1461,6 +1503,7 @@ function showTemplates(){
 // === M10: Meeting-Export System ===
 var MAX_SNAPSHOTS=20;
 function migrateUUIDs(){var changed=false;DB.clients.forEach(function(c){
+  pushUndo('UUIDs migriert');
 if(!c._id){c._id="c_"+Math.random().toString(36).substring(2,10);changed=true;}
 c.projects.forEach(function(p){if(!p._id){p._id="p_"+Math.random().toString(36).substring(2,10);changed=true;}
 p.phases.forEach(function(ph){if(!ph._id){ph._id="ph_"+Math.random().toString(36).substring(2,10);changed=true;}
@@ -1499,6 +1542,7 @@ else{content=generateJSONExport(ids);fn="projektstand-"+cn+"-"+ds+".json";mime="
 var blob=new Blob([content],{type:mime});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);closeExportModal();}
 var MAX_SNAPSHOTS = 20;
 function createSnapshot(clientIndex, trigger) {
+  pushUndo('Snapshot erstellt');
   var client = DB.clients[clientIndex];
   if (!client._snapshots) client._snapshots = [];
   var copy = JSON.parse(JSON.stringify(client, function(key, val) { return key === "_snapshots" ? undefined : val; }));
@@ -1508,6 +1552,7 @@ function createSnapshot(clientIndex, trigger) {
   save(); return snapshot.id;
 }
 function restoreSnapshot(clientIndex, snapshotId) {
+  pushUndo('Snapshot wiederhergestellt');
   var client = DB.clients[clientIndex]; var snapshots = client._snapshots || [];
   var snap = snapshots.find(function(s) { return s.id === snapshotId; });
   if (!snap) return false;
@@ -1579,6 +1624,7 @@ function computeDiff(importData) {
 }
 function checkAllGreen() { document.querySelectorAll("#diffModal .diff-green input[type=checkbox]").forEach(function(cb) { cb.checked = true; }); }
 function applySelectedChanges() {
+  pushUndo('\u00c4nderungen angewendet');
   var checks = document.querySelectorAll("#diffModal input[type=checkbox]:checked");
   var indices = []; checks.forEach(function(cb) { indices.push(parseInt(cb.dataset.idx)); });
   if (indices.length === 0) { alert("Keine Änderungen ausgewählt."); return; }
