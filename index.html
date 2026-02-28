@@ -777,7 +777,7 @@ try {
 // ============================================================
 // DATA
 // ============================================================
-function defaultPhases(){return JSON.parse(JSON.stringify([
+var DEFAULT_PHASES = [
 {id:'P1',name:'PHASE 1: ONBOARDING & SETUP',color:'#2563eb',startDate:'',endDate:'',packages:[
 {name:'Discovery & Verträge',tasks:[
 {t:'Kennenlerngespräch',owner:'Mitch',ki:true,vor:'Lead qualifiziert',auto:'Niedrig',min:45},
@@ -903,7 +903,9 @@ function defaultPhases(){return JSON.parse(JSON.stringify([
 {t:'Testimonial + Case Study',owner:'Mitch',ki:true,vor:'Ergebnisse positiv',auto:'Hoch',min:30},
 {t:'Weiterarbeit besprechen',owner:'Mitch',ki:true,vor:'Review',auto:'Manuell',min:30},
 ]}]}
-]))}
+];
+
+function defaultPhases(){return JSON.parse(JSON.stringify(DEFAULT_PHASES));}
 
 const DOCS=[
   {id:'positionierung',icon:'🎯',name:'Positionierung',desc:'USP, Messaging, Tonalität',int:false},
