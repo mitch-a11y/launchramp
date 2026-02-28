@@ -56,7 +56,7 @@ function tplAddTask(id,pi,ki){
 
 function tplDelPhase(id,pi){
   const t=tplGetTpl(id); if(!t) return;
-  if(!confirm("Phase \""+t.data.phases[pi].name+"\" lÃ¶schen?")) return;
+  if(!confirm("Phase \""+t.data.phases[pi].name+"\" löschen?")) return;
   t.data.phases.splice(pi,1);
   saveTemplate(t); renderTemplates();
 }
@@ -162,7 +162,7 @@ function calcProcessMetrics(){
         totalTasks++;
         totalPlan += plan;
         totalIst += ist;
-        const info = {task:tk.t, phase:ph.name||("Phase "+(pi+1)), package:pk.name||"", plan, ist, owner:tk.owner||"â", path:pi+"_"+pki+"_"+ti};
+        const info = {task:tk.t, phase:ph.name||("Phase "+(pi+1)), package:pk.name||"", plan, ist, owner:tk.owner||"–", path:pi+"_"+pki+"_"+ti};
         if(!tk.owner || !tk.owner.trim()){ tasksNoOwner++; noOwner.push(info); }
         else if(ist > plan && plan>0){ overPlan.push({...info, diff:ist-plan, pct:Math.round(ist/plan*100)}); }
         else if(ist>0 && ist<=plan){ underPlan.push({...info, diff:plan-ist, pct:Math.round(ist/plan*100)}); }
@@ -218,7 +218,7 @@ function exportProcessReport(){
   txt += "Effizienz: "+m.efficiency+"%\n";
   txt += "Ohne Zeiterfassung: "+m.tasksNoOwner+"\n\n";
   if(m.overPlan.length){
-    txt += "ÃBER-PLAN TASKS:\n";
+    txt += "ÜBER-PLAN TASKS:\n";
     m.overPlan.forEach(t=>{ txt += "  "+t.task+" ("+t.owner+"): Plan "+t.plan+" / Ist "+t.ist+" = "+t.pct+"%\n"; });
     txt += "\n";
   }
@@ -308,7 +308,7 @@ function emptyPhases(){
   ];
 }
 function futDate(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0]}
-// getActiveClient() now returns the active PROJECT (not client) â this is key for backward compat
+// getActiveClient() now returns the active PROJECT (not client) — this is key for backward compat
 function AC(){return DB.clients.find(c=>c.id===DB.activeClient)||DB.clients[0]}
 
 // ============================================================
@@ -319,30 +319,30 @@ function addClient(){
   _selectedTpl='launch';
   const m=document.createElement('div');m.className='modal-overlay';
   m.innerHTML=`<div class="modal" style="max-width:440px">
-    <h3 style="margin:0 0 2px">â¨ Neuer Kunde</h3>
+    <h3 style="margin:0 0 2px">✨ Neuer Kunde</h3>
     <div class="modal-subtitle">Kunde anlegen und erstes Projekt erstellen</div>
     <div class="modal-label">Kundenname</div>
     <input id="newClientName" type="text" placeholder="z.B. Mustermann Coaching" style="margin-bottom:18px">
     <div class="modal-label">Projekt-Typ</div>
     <div class="tpl-grid" style="grid-template-columns:1fr 1fr 1fr">
       <div class="tpl-option active" id="tplLaunch" onclick="selectTpl('launch')">
-        <span class="tpl-icon">ð</span>
+        <span class="tpl-icon">🚀</span>
         <span class="tpl-label">Webinar Launch</span>
-        <span style="font-size:10px;color:var(--text3)">8 Phasen Â· 60+ Tasks</span>
+        <span style="font-size:10px;color:var(--text3)">8 Phasen · 60+ Tasks</span>
       </div>
       <div class="tpl-option" id="tplRetainer" onclick="selectTpl('retainer')">
-        <span class="tpl-icon">ð</span>
+        <span class="tpl-icon">🔄</span>
         <span class="tpl-label">Retainer</span>
         <span style="font-size:10px;color:var(--text3)">Monatlicher Baukasten</span>
       </div>
       <div class="tpl-option" id="tplEmpty" onclick="selectTpl('empty')">
-        <span class="tpl-icon">ð</span>
+        <span class="tpl-icon">📝</span>
         <span class="tpl-label">Leeres Projekt</span>
-        <span style="font-size:10px;color:var(--text3)">3 Phasen Â· Frei</span>
+        <span style="font-size:10px;color:var(--text3)">3 Phasen · Frei</span>
       </div>
     </div>
     <div id="retainerCategories" style="display:none;margin-top:12px">
-      <div class="modal-label">Retainer-Baukasten â wÃ¤hle die Kategorien</div>
+      <div class="modal-label">Retainer-Baukasten – wähle die Kategorien</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${RETAINER_CATEGORIES.map(cat=>`<label class="ret-cat-label" data-cat="${cat.id}">
           <input type="checkbox" value="${cat.id}" class="retCatCheck" style="display:none">
@@ -382,7 +382,7 @@ function confirmNewClient(btn){
   let categories=[];
   if(tpl==='retainer'){
     categories=[...document.querySelectorAll('.retCatCheck:checked')].map(cb=>cb.value);
-    if(!categories.length){toast('Mindestens eine Kategorie wÃ¤hlen');return}
+    if(!categories.length){toast('Mindestens eine Kategorie wählen');return}
   }
   m.remove();
   const tplMap={launch:'webinar',retainer:'retainer',empty:'empty'};
@@ -401,20 +401,20 @@ function addProject(clientId){
   if(!client)return;
   const m=document.createElement('div');m.className='modal-overlay';
   m.innerHTML=`<div class="modal" style="max-width:440px">
-    <h3 style="margin:0 0 2px">ð Neues Projekt</h3>
-    <div class="modal-subtitle">Projekt fÃ¼r ${esc(client.name)}</div>
+    <h3 style="margin:0 0 2px">📁 Neues Projekt</h3>
+    <div class="modal-subtitle">Projekt für ${esc(client.name)}</div>
     <div class="modal-label">Projektname</div>
-    <input id="newProjName" type="text" placeholder="z.B. Webinar MÃ¤rz, Retainer Q2..." style="margin-bottom:18px">
+    <input id="newProjName" type="text" placeholder="z.B. Webinar März, Retainer Q2..." style="margin-bottom:18px">
     <div class="modal-label">Projekt-Typ</div>
     <div class="tpl-grid" style="grid-template-columns:1fr 1fr 1fr">
       <div class="tpl-option active" id="tplLaunch" onclick="selectTpl('launch')">
-        <span class="tpl-icon">ð</span><span class="tpl-label">Launch</span>
+        <span class="tpl-icon">🚀</span><span class="tpl-label">Launch</span>
       </div>
       <div class="tpl-option" id="tplRetainer" onclick="selectTpl('retainer')">
-        <span class="tpl-icon">ð</span><span class="tpl-label">Retainer</span>
+        <span class="tpl-icon">🔄</span><span class="tpl-label">Retainer</span>
       </div>
       <div class="tpl-option" id="tplEmpty" onclick="selectTpl('empty')">
-        <span class="tpl-icon">ð</span><span class="tpl-label">Leer</span>
+        <span class="tpl-icon">📝</span><span class="tpl-label">Leer</span>
       </div>
     </div>
     <div id="retainerCategories" style="display:none;margin-top:12px">
@@ -427,7 +427,7 @@ function addProject(clientId){
         </label>`).join('')}
       </div>
     </div>
-    ${client.projects.some(p=>!p.completed)?`<div style="margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--text3)">ð¡ Du kannst auch ein bestehendes Projekt als Template nutzen: <select id="dupFromProj" style="font-size:11px;margin-top:4px;padding:2px 6px;border:1px solid var(--border);border-radius:4px"><option value="">â Kein Template â</option>${client.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>`:''}
+    ${client.projects.some(p=>!p.completed)?`<div style="margin-top:12px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:11px;color:var(--text3)">💡 Du kannst auch ein bestehendes Projekt als Template nutzen: <select id="dupFromProj" style="font-size:11px;margin-top:4px;padding:2px 6px;border:1px solid var(--border);border-radius:4px"><option value="">– Kein Template –</option>${client.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>`:''}
     <div class="btn-row" style="margin-top:18px">
       <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
       <button class="btn-primary" onclick="confirmNewProject('${clientId}',this)">Anlegen</button>
@@ -447,7 +447,7 @@ function confirmNewProject(clientId,btn){
   let categories=[];
   if(tpl==='retainer'){
     categories=[...document.querySelectorAll('.retCatCheck:checked')].map(cb=>cb.value);
-    if(!categories.length){toast('Mindestens eine Kategorie wÃ¤hlen');return}
+    if(!categories.length){toast('Mindestens eine Kategorie wählen');return}
   }
   // Check if duplicating from existing project
   const dupSel=document.getElementById('dupFromProj');
@@ -485,7 +485,7 @@ function duplicateRetainer(projId){
   const newProj=JSON.parse(JSON.stringify(src));
   newProj.id='p'+Date.now()+'_'+Math.random().toString(36).substr(2,4);
   // Increment month name
-  const months=['Januar','Februar','MÃ¤rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const months=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const curMonth=new Date().getMonth();
   const nextMonth=(curMonth+1)%12;
   const year=nextMonth===0?new Date().getFullYear()+1:new Date().getFullYear();
@@ -532,7 +532,7 @@ function toggleClientExpand(id,e){
   renderSidebar();
 }
 function delClient(id,e){
-  pushUndo('Kunde gelÃ¶scht');e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte lÃ¶schen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}Bus.emit('data:changed');toast('GelÃ¶scht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();Bus.emit('data:changed');}
+  pushUndo('Kunde gelöscht');e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}Bus.emit('data:changed');toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();Bus.emit('data:changed');}
   pushUndo('Kunde gel\u00f6scht');
 
 function delProject(clientId,projId,e){
@@ -540,10 +540,10 @@ function delProject(clientId,projId,e){
   e.stopPropagation();
   const client=DB.clients.find(c=>c.id===clientId);
   if(!client||client.projects.length<=1)return toast('Mind. 1 Projekt pro Kunde');
-  if(!confirm('Projekt lÃ¶schen?'))return;
+  if(!confirm('Projekt löschen?'))return;
   client.projects=client.projects.filter(p=>p.id!==projId);
   if(DB.activeProject===projId)DB.activeProject=client.projects[0].id;
-  Bus.emit('data:changed');toast('Projekt gelÃ¶scht');
+  Bus.emit('data:changed');toast('Projekt gelöscht');
 }
 function showDashboard(){dashboardActive=true;renderAll()}
 function toggleProjectComplete(){
@@ -670,7 +670,7 @@ function openAddPackage(pi){
   const c=getActiveClient();
 if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   c.phases[pi].packages.push({name:name.trim(),tasks:[]});
-  Bus.emit('data:changed');toast('Kategorie hinzugefÃ¼gt');
+  Bus.emit('data:changed');toast('Kategorie hinzugefügt');
   // Auto-open the phase and new package
   if(!openPhases.has(pi)){openPhases.add(pi)}
   const newPai=c.phases[pi].packages.length-1;
@@ -688,10 +688,10 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phase
 }
 function deletePackage(pi,pai){
   pushUndo('Kategorie gel\u00f6scht');
-  if(!confirm('Kategorie und alle enthaltenen Aufgaben lÃ¶schen?'))return;
+  if(!confirm('Kategorie und alle enthaltenen Aufgaben löschen?'))return;
   getActiveClient().phases[pi].packages.splice(pai,1);
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
-  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('Kategorie gelÃ¶scht');
+  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('Kategorie gelöscht');
 }
 
 // ============================================================
@@ -832,13 +832,13 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
 function cycle(id){
-  pushUndo('Status geÃ¤ndert');const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;Bus.emit('data:changed');logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+  pushUndo('Status geändert');const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;Bus.emit('data:changed');logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
   pushUndo('Status ge\u00e4ndert');
 function setSt(id,v){
   pushUndo('Status gesetzt');var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;Bus.emit('data:changed');logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
   pushUndo('Status gesetzt');
 function setOwner(pi,pai,ti,sel){
-  pushUndo('Owner geÃ¤ndert');const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;Bus.emit('data:changed');}
+  pushUndo('Owner geändert');const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;Bus.emit('data:changed');}
   pushUndo('Owner ge\u00e4ndert');
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
 
@@ -884,7 +884,7 @@ function saveTask(){
   if(taskCtx.mode==='add'){
     data._id='t_'+Math.random().toString(36).substring(2,10);
     c.phases[taskCtx.pi].packages[taskCtx.pai].tasks.push(data);
-    toast('Task hinzugefÃ¼gt');
+    toast('Task hinzugefügt');
   } else {
     const old=c.phases[taskCtx.pi].packages[taskCtx.pai].tasks[taskCtx.ti];
     data.ki=old.ki;
@@ -898,13 +898,13 @@ function saveTask(){
 function deleteTask(){
   pushUndo('Task gel\u00f6scht');
   if(!taskCtx||taskCtx.mode!=='edit')return;
-  if(!confirm('Task lÃ¶schen?'))return;
+  if(!confirm('Task löschen?'))return;
   const c=getActiveClient();
   c.phases[taskCtx.pi].packages[taskCtx.pai].tasks.splice(taskCtx.ti,1);
   // Shift states
   rebuildStates(c);
   save();closeModal('taskModal');taskCtx=null;renderAll();
-  toast('Task gelÃ¶scht');
+  toast('Task gelöscht');
 }
 
 function renumberPhases(c){
@@ -956,7 +956,7 @@ function savePhase(){
       endDate:document.getElementById('pmEnd').value,
       packages:[{name:'Arbeitspakete',tasks:[]}]
     });
-    toast('Phase hinzugefÃ¼gt');
+    toast('Phase hinzugefügt');
   } else {
     const p=c.phases[phaseCtx.pi];
     const newName=name.toUpperCase().startsWith('PHASE')?name:`${p.id}: ${name.toUpperCase()}`;
@@ -971,11 +971,11 @@ function savePhase(){
 function deletePhase(){
   pushUndo('Phase gel\u00f6scht');
   if(!phaseCtx||phaseCtx.mode!=='edit')return;
-  if(!confirm('Phase und alle Tasks lÃ¶schen?'))return;
+  if(!confirm('Phase und alle Tasks löschen?'))return;
   const c=getActiveClient();c.phases.splice(phaseCtx.pi,1);
   renumberPhases(c);rebuildStates(c);
   save();closeModal('phaseModal');phaseCtx=null;renderAll();
-  toast('Phase gelÃ¶scht');
+  toast('Phase gelöscht');
 }
 
 function editTaskLink(pi,pai,ti,type){
@@ -986,7 +986,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   if(!task.links)task.links={};
   const label=type==='prompt'?'Prompt-Link':'SOP/Video-Link';
   const current=task.links[type]||'';
-  const url=prompt(`${label} fÃ¼r "${task.t}":`,current);
+  const url=prompt(`${label} für "${task.t}":`,current);
   if(url===null)return;
   task.links[type]=url.trim();
   Bus.emit('data:changed');
@@ -1020,7 +1020,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   const ownerLC=(task.owner||'team').toLowerCase();
   const m=document.createElement('div');m.className='modal-overlay';
   m.innerHTML=`<div class="modal" style="max-width:400px">
-    <h3 style="margin:0 0 2px">ð Zeitblock planen</h3>
+    <h3 style="margin:0 0 2px">🔒 Zeitblock planen</h3>
     <div class="modal-subtitle">${esc(task.t)}</div>
     <div style="display:flex;gap:10px;margin-bottom:16px">
       <div style="flex:1"><div class="modal-label">Datum</div>
@@ -1033,12 +1033,12 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
     <div class="modal-label">Verantwortlich</div>
     <div style="margin-bottom:16px"><span class="opill opill-${ownerLC}" style="cursor:default;background-image:none;padding-right:10px;font-size:11px">${task.owner||'Team'}</span></div>
     <div class="modal-preview">
-      ð <strong>${task.owner||'Team'}</strong> blockt sich <strong><span id="zbPreviewMins">${defMins}</span>min</strong> am <strong><span id="zbPreviewDate">${fmtShort(defDate)}</span></strong> um <strong><span id="zbPreviewTime">${defTime}</span></strong> Uhr
+      📅 <strong>${task.owner||'Team'}</strong> blockt sich <strong><span id="zbPreviewMins">${defMins}</span>min</strong> am <strong><span id="zbPreviewDate">${fmtShort(defDate)}</span></strong> um <strong><span id="zbPreviewTime">${defTime}</span></strong> Uhr
     </div>
     <div class="btn-row">
       ${scheduled?'<button class="btn-danger" onclick="removeScheduled('+pi+','+pai+','+ti+',this)">Entfernen</button>':''}
       <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-      <button class="btn-primary" onclick="confirmZeitblock(${pi},${pai},${ti},this)">ð In Google Calendar</button>
+      <button class="btn-primary" onclick="confirmZeitblock(${pi},${pai},${ti},this)">📅 In Google Calendar</button>
     </div>
   </div>`;
   document.body.appendChild(m);
@@ -1047,9 +1047,9 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
     const d=document.getElementById('zbDate').value;
     const t=document.getElementById('zbTime').value;
     const mn=document.getElementById('zbMins').value;
-    document.getElementById('zbPreviewDate').textContent=d?fmtShort(d):'â';
-    document.getElementById('zbPreviewTime').textContent=t||'â';
-    document.getElementById('zbPreviewMins').textContent=mn||'â';
+    document.getElementById('zbPreviewDate').textContent=d?fmtShort(d):'—';
+    document.getElementById('zbPreviewTime').textContent=t||'—';
+    document.getElementById('zbPreviewMins').textContent=mn||'—';
   };
   m.querySelector('#zbDate').addEventListener('input',updatePreview);
   m.querySelector('#zbTime').addEventListener('input',updatePreview);
@@ -1066,8 +1066,8 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   task.scheduled={date,time,mins,savedAt:new Date().toISOString()};
   save();
   // Build Google Calendar URL
-  const title=encodeURIComponent('ð '+task.t+' Â· '+c.name);
-  const desc=encodeURIComponent('Phase: '+c.phases[pi].name+'\\nOwner: '+(task.owner||'Team')+'\\nGeschÃ¤tzt: '+mins+' Minuten\\n\\nâ LaunchRamp Zeitblock');
+  const title=encodeURIComponent('🔒 '+task.t+' · '+c.name);
+  const desc=encodeURIComponent('Phase: '+c.phases[pi].name+'\\nOwner: '+(task.owner||'Team')+'\\nGeschätzt: '+mins+' Minuten\\n\\n— LaunchRamp Zeitblock');
   const [h,mn]=time.split(':').map(Number);
   const start=new Date(date+'T'+time+':00');
   const end=new Date(start.getTime()+mins*60000);
@@ -1076,7 +1076,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   window.open(url,'_blank');
   btn.closest('.modal-overlay').remove();
   renderAll();
-  toast('Zeitblock geplant â');
+  toast('Zeitblock geplant ✓');
 }
 function removeScheduled(pi,pai,ti,btn){
   pushUndo('Zeitblock entfernt');
@@ -1113,13 +1113,13 @@ function deletePhaseInline(pi){
   const c=getActiveClient();
 if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   const phaseName=c.phases[pi]?c.phases[pi].name:'Phase';
-  if(!confirm(`"${phaseName}" und alle zugehÃ¶rigen Tasks lÃ¶schen?`))return;
+  if(!confirm(`"${phaseName}" und alle zugehörigen Tasks löschen?`))return;
   c.phases.splice(pi,1);
   renumberPhases(c);
   rebuildStates(c);
   openPhases.delete(pi);
   Bus.emit('data:changed');
-  toast('Phase gelÃ¶scht');
+  toast('Phase gelöscht');
 }
 
 // ============================================================
@@ -1156,9 +1156,9 @@ function ctxLogTime(){
 function ctxDelete(){
   pushUndo('Task gel\u00f6scht');
   if(!ctxData)return;
-  if(!confirm('Task lÃ¶schen?'))return;
+  if(!confirm('Task löschen?'))return;
   getActiveClient().phases[ctxData.pi].packages[ctxData.pai].tasks.splice(ctxData.ti,1);
-  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('GelÃ¶scht');ctxHide();
+  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('Gelöscht');ctxHide();
 }
 document.addEventListener('click',ctxHide);
 
@@ -1174,7 +1174,7 @@ document.addEventListener('click',function(e){
 // ============================================================
 // MINI TIMELINE (Topbar)
 // ============================================================
-function saveJFLink(){/* legacy â no longer used */}
+function saveJFLink(){/* legacy – no longer used */}
 
 let curDocId=null;
 function editLink(id,name){curDocId=id;document.getElementById('linkName').textContent=name;document.getElementById('linkUrl').value=getActiveClient().docLinks[id]||'';openModal('linkModal')}
@@ -1308,8 +1308,8 @@ function addToCal(){
   const d=document.getElementById('calDate').value,t=document.getElementById('calTime').value,dur=parseInt(document.getElementById('calDur').value)||60;
   const s=new Date(`${d}T${t}`),e=new Date(s.getTime()+dur*6e4);
   const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(calData.name)}&dates=${f(s)}/${f(e)}&details=${encodeURIComponent('LaunchRamp â '+getActiveClient().name)}&sf=true&output=xml`,'_blank');
-  closeModal('calModal');toast('Calendar geÃ¶ffnet');
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(calData.name)}&dates=${f(s)}/${f(e)}&details=${encodeURIComponent('LaunchRamp – '+getActiveClient().name)}&sf=true&output=xml`,'_blank');
+  closeModal('calModal');toast('Calendar geöffnet');
 }
 function setupJourfix(){
   const c=getActiveClient();
@@ -1324,7 +1324,7 @@ function setupJourfix(){
   const el=document.createElement('div');
   el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:9999';
   el.innerHTML=`<div style="background:var(--surface);border-radius:var(--radius);padding:20px;width:340px;max-width:90vw;box-shadow:var(--shadow-lg)">
-    <div style="font-size:14px;font-weight:700;margin-bottom:14px">ð ${isEdit?'Jourfix Ã¤ndern':'Jourfix legen'}</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:14px">📅 ${isEdit?'Jourfix ändern':'Jourfix legen'}</div>
     <div style="display:flex;gap:10px;margin-bottom:12px">
       <div style="flex:1"><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">Wochentag</div>
         <select id="jfDay" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text)">${dOpts}</select></div>
@@ -1355,18 +1355,18 @@ function confirmJourfix(btn){
   btn.closest('div[style*=fixed]').remove();
   renderDocs();
   if(isNew){
-    // Neuer Jourfix â Google Calendar Link anbieten
+    // Neuer Jourfix → Google Calendar Link anbieten
     const dayNames=['','Montag','Dienstag','Mittwoch','Donnerstag','Freitag'];
     const gcalUrl=buildJourfixGcalUrl(c,day,time);
     const confirmEl=document.createElement('div');
     confirmEl.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:9999';
     confirmEl.innerHTML=`<div style="background:var(--surface);border-radius:var(--radius);padding:20px;width:340px;max-width:90vw;box-shadow:var(--shadow-lg);text-align:center">
-      <div style="font-size:32px;margin-bottom:8px">â</div>
+      <div style="font-size:32px;margin-bottom:8px">✅</div>
       <div style="font-size:14px;font-weight:700;margin-bottom:4px">Jourfix gespeichert</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:16px">${dayNames[day]}s um ${time} Uhr</div>
       <div style="display:flex;gap:8px;justify-content:center">
         <button class="btn sm" onclick="this.closest('div[style*=fixed]').remove()">Fertig</button>
-        <button class="btn primary sm" onclick="window.open('${gcalUrl}','_blank');this.closest('div[style*=fixed]').remove()">ð In Google Calendar eintragen</button>
+        <button class="btn primary sm" onclick="window.open('${gcalUrl}','_blank');this.closest('div[style*=fixed]').remove()">📅 In Google Calendar eintragen</button>
       </div>
     </div>`;
     document.body.appendChild(confirmEl);
@@ -1382,7 +1382,7 @@ function buildJourfixGcalUrl(c,day,time){
   const f=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
   const gcalDays=['','MO','TU','WE','TH','FR','SA'];
   const title=encodeURIComponent(`${c.name} x Digital Sun Jourfix`);
-  const details=encodeURIComponent('WÃ¶chentlicher Jourfix â LaunchRamp');
+  const details=encodeURIComponent('Wöchentlicher Jourfix – LaunchRamp');
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${f(s)}/${f(e)}&details=${details}&recur=RRULE:FREQ=WEEKLY;BYDAY=${gcalDays[day]}&sf=true&output=xml`;
 }
 function nextWeekday(targetDay){
@@ -1458,17 +1458,17 @@ function toggleTimer(taskId,evt){
       }
     },15000);
     Bus.emit('tasks:changed');applyFilters();
-    toast('Timer lÃ¤uft');
+    toast('Timer läuft');
   }
 }
 function addManualTime(taskId){
   pushUndo('Zeit hinzugef\u00fcgt');
   const c=getActiveClient();
   if(!c.timeLog)c.timeLog=[];
-  const val=prompt('Minuten nachtrÃ¤glich eintragen:','30');
+  const val=prompt('Minuten nachträglich eintragen:','30');
   if(val===null)return;
   const mins=parseInt(val);
-  if(isNaN(mins)||mins<=0)return toast('UngÃ¼ltige Eingabe');
+  if(isNaN(mins)||mins<=0)return toast('Ungültige Eingabe');
   c.timeLog.push({taskId,start:Date.now(),end:Date.now(),mins,manual:true});
   Bus.emit('tasks:changed');applyFilters();
   toast(`${mins}m manuell erfasst`);
@@ -1522,8 +1522,8 @@ p.phases.forEach(function(ph){if(!ph._id){ph._id="ph_"+Math.random().toString(36
 ph.packages.forEach(function(pk){if(!pk._id){pk._id="pkg_"+Math.random().toString(36).substring(2,10);changed=true;}
 pk.tasks.forEach(function(t){if(!t._id){t._id="t_"+Math.random().toString(36).substring(2,10);changed=true;}});});});});});
 if(changed)save();}
-function formatDateDE(d){var m=["Jan","Feb","MÃ¤r","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()]+" "+d.getFullYear();}
-function formatDateShortDE(d){var m=["Jan","Feb","MÃ¤r","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()];}
+function formatDateDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()]+" "+d.getFullYear();}
+function formatDateShortDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()];}
 function closeExportModal(){document.getElementById("exportModal").style.display="none";}
 function getSelectedExportClients(){return[].slice.call(document.querySelectorAll(".exportClientCb:checked")).map(function(cb){return Number(cb.value);});}
 function toggleAllExport(ck){document.querySelectorAll(".exportClientCb").forEach(function(cb){cb.checked=ck;});}
@@ -1574,29 +1574,29 @@ function restoreSnapshot(clientIndex, snapshotId) {
 }
 function openSnapshotModal() {
   var client = DB.clients.find(function(c){return c.id===DB.activeClient}); var snaps = client._snapshots || [];
-  var h = "<h3>ð Versionshistorie â " + esc(client.name) + "</h3>";
+  var h = "<h3>🕐 Versionshistorie — " + esc(client.name) + "</h3>";
   if (snaps.length === 0) { h += "<p style=\"color:var(--dim)\">Noch keine Snapshots. Werden automatisch vor jedem Import erstellt.</p>"; }
   else { h += "<div class=\"snapshot-list\">"; snaps.forEach(function(snap) {
     var d = new Date(snap.timestamp); var ds = formatDateDE(d) + ", " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
-    h += "<div class=\"snapshot-item\"><div><strong>ð¸ " + ds + "</strong><br><span style=\"color:var(--dim);font-size:0.85rem\">" + esc(snap.trigger) + "</span></div>";
-    h += "<div style=\"display:flex;gap:0.5rem\"><button onclick=\"if(confirm('Wiederherstellen? Aktueller Stand wird vorher als Backup gespeichert.'))restoreSnapshot(" + DB.activeClient + ",'" + snap.id + "')\" class=\"btn btn-sm\" style=\"background:var(--red)\">â©ï¸ Wiederherstellen</button></div></div>";
+    h += "<div class=\"snapshot-item\"><div><strong>📸 " + ds + "</strong><br><span style=\"color:var(--dim);font-size:0.85rem\">" + esc(snap.trigger) + "</span></div>";
+    h += "<div style=\"display:flex;gap:0.5rem\"><button onclick=\"if(confirm('Wiederherstellen? Aktueller Stand wird vorher als Backup gespeichert.'))restoreSnapshot(" + DB.activeClient + ",'" + snap.id + "')\" class=\"btn btn-sm\" style=\"background:var(--red)\">↩️ Wiederherstellen</button></div></div>";
   }); h += "</div>"; }
   document.getElementById("snapshotModal").querySelector(".modal-content").innerHTML = h;
   openModal("snapshotModal");
 }
-function openImportModal() { document.getElementById("importFileInput").value = ""; document.getElementById("importModal").querySelector(".modal-content").innerHTML = "<h3>ð¥ Meeting-Update importieren</h3><p>JSON-Datei hochladen die von Claude erstellt wurde:</p><input type=\"file\" id=\"importFileInput\" accept=\".json\" onchange=\"handleImportFile(this)\" style=\"margin:1rem 0\"><div id=\"importStatus\"></div>"; openModal("importModal"); }
+function openImportModal() { document.getElementById("importFileInput").value = ""; document.getElementById("importModal").querySelector(".modal-content").innerHTML = "<h3>📥 Meeting-Update importieren</h3><p>JSON-Datei hochladen die von Claude erstellt wurde:</p><input type=\"file\" id=\"importFileInput\" accept=\".json\" onchange=\"handleImportFile(this)\" style=\"margin:1rem 0\"><div id=\"importStatus\"></div>"; openModal("importModal"); }
 function handleImportFile(input) {
   var file = input.files[0]; if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
       var importData = JSON.parse(e.target.result);
-      if (!importData.clients || !importData.clients.length) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">â UngÃ¼ltige Datei: Kein clients-Array gefunden.</p>"; return; }
+      if (!importData.clients || !importData.clients.length) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">❌ Ungültige Datei: Kein clients-Array gefunden.</p>"; return; }
       var changes = computeDiff(importData);
-      if (changes.length === 0) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--green)\">â Keine Ãnderungen erkannt. Der Stand ist identisch.</p>"; return; }
+      if (changes.length === 0) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--green)\">✅ Keine Änderungen erkannt. Der Stand ist identisch.</p>"; return; }
       window._pendingImport = { data: importData, changes: changes };
       closeModal("importModal"); renderDiffReview(changes);
-    } catch(err) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">â JSON Parse-Fehler: " + esc(err.message) + "</p>"; }
+    } catch(err) { document.getElementById("importStatus").innerHTML = "<p style=\"color:var(--red)\">❌ JSON Parse-Fehler: " + esc(err.message) + "</p>"; }
   };
   reader.readAsText(file);
 }
@@ -1639,10 +1639,10 @@ function applySelectedChanges() {
   pushUndo('\u00c4nderungen angewendet');
   var checks = document.querySelectorAll("#diffModal input[type=checkbox]:checked");
   var indices = []; checks.forEach(function(cb) { indices.push(parseInt(cb.dataset.idx)); });
-  if (indices.length === 0) { alert("Keine Ãnderungen ausgewÃ¤hlt."); return; }
+  if (indices.length === 0) { alert("Keine Änderungen ausgewählt."); return; }
   var changes = window._pendingImport.changes;
   var clientIdx = DB.clients.findIndex(function(c) { return c._id === window._pendingImport.data.clients[0]._id; });
-  if (clientIdx >= 0) createSnapshot(clientIdx, "Backup vor Import (" + indices.length + " Ãnderungen)");
+  if (clientIdx >= 0) createSnapshot(clientIdx, "Backup vor Import (" + indices.length + " Änderungen)");
   var applied = 0;
   indices.forEach(function(i) {
     var c = changes[i]; if (!c) return;
@@ -1669,7 +1669,7 @@ function applySelectedChanges() {
   Bus.emit('data:changed'); closeModal("diffModal");
   var notifs = generateNotifications(changes, indices);
   if (notifs && notifs.length) { openNotifModal(notifs); }
-  else { showToast("â " + applied + " Ãnderungen Ã¼bernommen"); }
+  else { showToast("✅ " + applied + " Änderungen übernommen"); }
   window._pendingImport = null;
 }
 function generateNotifications(changes, appliedIndices) {
@@ -1682,48 +1682,48 @@ function generateNotifications(changes, appliedIndices) {
     if (!owner) return;
     if (!byOwner[owner]) byOwner[owner] = [];
     var msg = "";
-    if (c.type === "status_change") msg = "Status: " + (c.task||"") + " â " + c.newStatus;
-    else if (c.type === "deadline_change") msg = "Deadline: " + (c.task||"") + " â " + (c.newDeadline||"entfernt");
+    if (c.type === "status_change") msg = "Status: " + (c.task||"") + " → " + c.newStatus;
+    else if (c.type === "deadline_change") msg = "Deadline: " + (c.task||"") + " → " + (c.newDeadline||"entfernt");
     else if (c.type === "owner_change") msg = "Du bist jetzt Owner: " + (c.task||"");
     else if (c.type === "new_task") msg = "Neuer Task: " + (c.data.t || c.data.text || "");
     else if (c.type === "notes_change") msg = "Notiz aktualisiert: " + (c.task||"");
-    else if (c.type === "rename_task") msg = "Umbenannt: " + (c.task||"") + " â " + (c.newName||"");
-    else if (c.type === "effort_change") msg = "Aufwand geÃ¤ndert: " + (c.task||"");
+    else if (c.type === "rename_task") msg = "Umbenannt: " + (c.task||"") + " → " + (c.newName||"");
+    else if (c.type === "effort_change") msg = "Aufwand geändert: " + (c.task||"");
     else return;
     byOwner[owner].push(msg);
   });
   var result = [];
   Object.keys(byOwner).forEach(function(owner) {
     var lines = "Meeting-Update " + formatDateDE(new Date()) + ":\n";
-    byOwner[owner].forEach(function(m) { lines += "â¢ " + m + "\n"; });
+    byOwner[owner].forEach(function(m) { lines += "• " + m + "\n"; });
     result.push({ owner: owner, count: byOwner[owner].length, text: lines });
   });
   return result;
 }
 function openNotifModal(notifs) {
     notifs = notifs || DB.notifications || [];
-  var h = "<h3>ð¬ Team-Updates nach Import</h3>";
+  var h = "<h3>📬 Team-Updates nach Import</h3>";
   notifs.forEach(function(n, i) {
     h += "<div style=\"margin:1rem 0;padding:1rem;background:var(--bg2);border-radius:8px\">";
-    h += "<strong>ð¤ " + esc(n.owner) + " (" + n.count + " Ãnderungen)</strong>";
+    h += "<strong>👤 " + esc(n.owner) + " (" + n.count + " Änderungen)</strong>";
     h += "<pre id=\"notif_" + i + "\" style=\"margin:0.5rem 0;white-space:pre-wrap;font-size:0.85rem\">" + esc(n.text) + "</pre>";
-    h += "<button onclick=\"copyNotif(" + i + ")\" class=\"btn btn-sm\">ð Kopieren</button>";
+    h += "<button onclick=\"copyNotif(" + i + ")\" class=\"btn btn-sm\">📋 Kopieren</button>";
     h += "</div>";
   });
-  h += "<div style=\"display:flex;gap:1rem;margin-top:1rem\"><button onclick=\"copyAllNotifs()\" class=\"btn btn-sm\">ð Alle kopieren</button>";
-  h += "<button onclick=\"closeModal('notifModal')\" class=\"btn btn-sm\">â­ï¸ Fertig</button></div>";
+  h += "<div style=\"display:flex;gap:1rem;margin-top:1rem\"><button onclick=\"copyAllNotifs()\" class=\"btn btn-sm\">📋 Alle kopieren</button>";
+  h += "<button onclick=\"closeModal('notifModal')\" class=\"btn btn-sm\">⏭️ Fertig</button></div>";
   window._notifData = notifs;
   document.getElementById("notifModal").querySelector(".modal-content").innerHTML = h;
   openModal("notifModal");
 }
 function copyNotif(i) {
   var el = document.getElementById("notif_" + i);
-  if (el) { navigator.clipboard.writeText(el.textContent).then(function() { showToast("ð Kopiert!"); }); }
+  if (el) { navigator.clipboard.writeText(el.textContent).then(function() { showToast("📋 Kopiert!"); }); }
 }
 function copyAllNotifs() {
   if (!window._notifData) return;
   var all = window._notifData.map(function(n) { return "--- " + n.owner + " ---\n" + n.text; }).join("\n\n");
-  navigator.clipboard.writeText(all).then(function() { showToast("ð Alle kopiert!"); });
+  navigator.clipboard.writeText(all).then(function() { showToast("📋 Alle kopiert!"); });
 }
 function showToast(msg) { var el = document.getElementById("notifToast"); if(!el) return; el.textContent = msg; el.style.display = "block"; setTimeout(function() { el.style.display = "none"; }, 3000); }
 setTimeout(function() { if (typeof migrateUUIDs === "function") migrateUUIDs(); }, 2000);
@@ -1733,7 +1733,7 @@ function runSmokeTests(){
   var results=[];var pass=0;var fail=0;
   function assert(name,condition,detail){
     if(condition){pass++;results.push("PASS: "+name)}
-    else{fail++;results.push("FAIL: "+name+(detail?" â "+detail:""))}
+    else{fail++;results.push("FAIL: "+name+(detail?" — "+detail:""))}
   }
   var c=getActiveClient();
 
