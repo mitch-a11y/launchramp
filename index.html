@@ -721,6 +721,37 @@ button,select,input,textarea{font-family:inherit}
 var DEBUG=false;
 function dbg(){if(DEBUG)console.log.apply(console,arguments);}
 var currentView='tasks';
+// === STATUS MIGRATION: Index-Keys → task.status ===
+function migrateStatesToTasks(c){
+  if(!c||!c.phases)return;
+  var migrated=0;
+  c.phases.forEach(function(p,pi){
+    p.packages.forEach(function(pk,pai){
+      pk.tasks.forEach(function(t,ti){
+        if(!t.status||t.status===""){
+          var key=pi+"-"+pai+"-"+ti;
+          if(c.states&&c.states[key]){
+            t.status=c.states[key];
+            migrated++;
+          } else {
+            t.status="Offen";
+          }
+        }
+      });
+    });
+  });
+  if(migrated>0)dbg("Migrated "+migrated+" task statuses from states to task.status");
+}
+function getTaskStatus(c,pi,pai,ti){
+  var t=c.phases[pi].packages[pai].tasks[ti];
+  if(t&&t.status)return t.status;
+  var key=pi+"-"+pai+"-"+ti;
+  return (c.states&&c.states[key])||"Offen";
+}
+function setTaskStatus(c,pi,pai,ti,val){
+  c.phases[pi].packages[pai].tasks[ti].status=val;
+}
+
 
 
 // ============================================================
@@ -1001,6 +1032,8 @@ function load(){
     });
   });
   if(DB.activeClient)expandedClients.add(DB.activeClient);
+  // Migrate states from index-keys to task.status
+  DB.clients.forEach(function(c){c.projects.forEach(function(p){migrateStatesToTasks(p);});});
   // Phase 2: Async load from Supabase (overrides localStorage if newer)
   loadFromSupabase();
 }
@@ -2225,8 +2258,8 @@ function renderSidebar(){
     return h;
   }).join('');
 }
-function projectPct(proj){let t=0,d=0;proj.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if((proj.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')d++})));return t?Math.round(d/t*100):0}
-function clientPct(c){let t=0,d=0;(c.projects||[]).forEach(proj=>{proj.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if((proj.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')d++})))});return t?Math.round(d/t*100):0}
+function projectPct(proj){let t=0,d=0;proj.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++})));return t?Math.round(d/t*100):0}
+function clientPct(c){let t=0,d=0;(c.projects||[]).forEach(proj=>{proj.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++})))});return t?Math.round(d/t*100):0}
 
 function renderTopbar(){
   const c=getActiveClient(); // active project
@@ -2345,7 +2378,7 @@ function recalcDeadlines(){
 function renderStats(){
   const c=getActiveClient();let t=0,d=0,w=0,wa=0,tm=0,dm=0;
   c.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{
-    t++;tm+=task.min||0;const s=c.states[`${pi}-${pai}-${ti}`]||'Offen';
+    t++;tm+=task.min||0;const s=(task.status||'Offen');
     if(s==='Erledigt'){d++;dm+=task.min||0}if(s==='In Arbeit')w++;if(s==='Warte auf Kunde')wa++;
   })));
   document.getElementById('sT').textContent=t;
@@ -2388,7 +2421,7 @@ function renderTasks(){
   const c=getActiveClient();let h='';
   c.phases.forEach((phase,pi)=>{
     let tt=0,dd=0;
-    phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')dd++}));
+    phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if(((t.status||'Offen'))==='Erledigt')dd++}));
     const pct=tt?Math.round(dd/tt*100):0;
       let phasePlanMins=0,phaseActualMins=0;
       phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{phasePlanMins+=(t.min||30);phaseActualMins+=getTrackedMins(c,`${pi}-${pai}-${ti}`);}));
@@ -2429,7 +2462,7 @@ function renderTasks(){
       const wOpen=openPackages.has(wKey);
       // Package task count
       let ptt=0,pdd=0;
-      pkg.tasks.forEach((t,ti)=>{ptt++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')pdd++});
+      pkg.tasks.forEach((t,ti)=>{ptt++;if(((t.status||'Offen'))==='Erledigt')pdd++});
       const ppct=ptt?Math.round(pdd/ptt*100):0;
         let pkgPlanMins=0,pkgActualMins=0;
         pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=`${pi}-${pai}-${ti}`;pkgActualMins+=getTrackedMins(c,tid);});
@@ -2465,7 +2498,7 @@ function renderTasks(){
       pkg.tasks.forEach((task,ti)=>{
         
         const id=`${pi}-${pai}-${ti}`;
-        const st=c.states[id]||'Offen';
+        const st=task.status||'Offen';
         const cc=st==='Erledigt'?'done':st==='In Arbeit'?'wip':st==='Warte auf Kunde'?'wait':'';
         const ci=st==='Erledigt'?'✓':st==='In Arbeit'?'●':st==='Warte auf Kunde'?'◔':'';
         if(!task.links)task.links={};
@@ -2508,7 +2541,7 @@ function renderTasks(){
           ?`<span class="link-btn has-link" onclick="window.open('${esc(sLink)}','_blank')" title="${esc(sLink)}">🎬 SOP <span class="gear" onclick="event.stopPropagation();editTaskLink(${pi},${pai},${ti},'sop')">⚙</span></span>`
           :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'sop')">🎬 SOP</span>`;
       var noteIcon=task.notes?'<span class="note-icon" title="'+esc(task.notes)+'">📝</span>':'';
-        h+=`<div class="task-row ${(!c.states[id]&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
+        h+=`<div class="task-row ${(task.status==='Offen'&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
           <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}${noteIcon}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
@@ -2702,8 +2735,8 @@ function editDeadline(pi,pai,ti,evt){
 }
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
-function cycle(id){const c=getActiveClient(),cur=c.states[id]||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];c.states[id]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
-function setSt(id,v){const old=getActiveClient().states[id]||"Offen";getActiveClient().states[id]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
+function cycle(id){const c=getActiveClient();var parts=id.split("-");var task=c.phases[parts[0]].packages[parts[1]].tasks[parts[2]];var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[id]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+function setSt(id,v){var c=getActiveClient();var parts=id.split("-");var task=c.phases[parts[0]].packages[parts[1]].tasks[parts[2]];var old=task.status||"Offen";task.status=v;if(c.states)c.states[id]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
 function setOwner(pi,pai,ti,sel){const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
 
 // ============================================================
@@ -2779,19 +2812,14 @@ function renumberPhases(c){
   });
 }
 function rebuildStates(c){
-  const ns={};
-  c.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{
-    const oldKey=findOldStateKey(c,pi,pai,ti,t);
-    if(oldKey&&c.states[oldKey])ns[`${pi}-${pai}-${ti}`]=c.states[oldKey];
-  })));
+  var ns={};
+  c.phases.forEach(function(p,pi){p.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){
+    if(t.status&&t.status!=="Offen")ns[pi+"-"+pai+"-"+ti]=t.status;
+  });});});
   c.states=ns;
 }
-function findOldStateKey(c,pi,pai,ti,t){
-  // Simple: just use the new index key if it exists
-  const k=`${pi}-${pai}-${ti}`;
-  if(c.states[k])return k;
-  return null;
-}
+// findOldStateKey - DEPRECATED (M-1: status now on task.status)
+function findOldStateKey(c,pi,pai,ti,t){return null;}
 
 // ============================================================
 // PHASE MODAL
@@ -3047,7 +3075,7 @@ function renderMiniTimeline(){
   const timePct=Math.max(0,Math.min(100,(elapsedMs/totalMs)*100));
   // Task progress
   let tt=0,dd=0;
-  c.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')dd++})));
+  c.phases.forEach((p,pi)=>p.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if(((t.status||'Offen'))==='Erledigt')dd++})));
   const taskPct=tt?Math.round(dd/tt*100):0;
   // Diff for color
   const diff=taskPct-timePct;
@@ -3073,7 +3101,7 @@ function renderMiniTimeline(){
     </div>`;
 }
 
-function phasePct(c,pi){let t=0,d=0;c.phases[pi].packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if((c.states[`${pi}-${pai}-${ti}`]||'Offen')==='Erledigt')d++}));return t?Math.round(d/t*100):0}
+function phasePct(c,pi){let t=0,d=0;c.phases[pi].packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++}));return t?Math.round(d/t*100):0}
 
 // ============================================================
 // DOCS VIEW
@@ -3383,8 +3411,7 @@ function renderDashboard(){
         const isOverdue=phaseEnd&&phaseEnd<now;
         p.packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{
           total++;
-          const key=`${pi}-${pai}-${ti}`;
-          const st=proj.states[key]||'Offen';
+          const st=task.status||'Offen';
           const mins=task.min||30;
           estMins+=mins;
           const owner=task.owner||'?';
@@ -3621,14 +3648,14 @@ renderAll();
 function getDueClass(task){if(!task.due)return'';const now=new Date();now.setHours(0,0,0,0);const d=new Date(task.due);d.setHours(0,0,0,0);const diff=(d-now)/86400000;if(diff<0)return'due-overdue';if(diff===0)return'due-today';if(diff<=3)return'due-soon';return'due-normal';}
 function getDueBadge(task){if(!task.due)return'';const cls=getDueClass(task);const d=new Date(task.due);const fmt=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});return' <span class="due-badge '+cls+'">'+fmt+'</span>';}
 function getOverdueDays(task){if(!task.due)return 0;const now=new Date();now.setHours(0,0,0,0);const d=new Date(task.due);d.setHours(0,0,0,0);return Math.max(0,Math.floor((now-d)/86400000));}
-function countOverdue(){let c=0;const p=getActiveClient();if(!p)return 0;const st=p.states||{};p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{const key=pi+'-'+ki+'-'+ti;if(!st[key]&&getDueClass(t)==='due-overdue')c++;});});});return c;}
+function countOverdue(){let c=0;const p=getActiveClient();if(!p)return 0;p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{const key=pi+'-'+ki+'-'+ti;if(!st[key]&&getDueClass(t)==='due-overdue')c++;});});});return c;}
 function updateOverdueBadge(){const el=document.getElementById('overdueCount');if(el){const c=countOverdue();el.textContent=c>0?c:'';}}
 
 var teamRoles=JSON.parse(localStorage.getItem('launchramp_teamRoles')||'{}');
 function getTeamRoles(){return teamRoles;}
 function setTeamRole(name,role){teamRoles[name]=role;localStorage.setItem('launchramp_teamRoles',JSON.stringify(teamRoles));}
 function getAllOwners(){const owners=new Set();DB.clients.forEach(c=>{c.projects.forEach(p=>{p.phases.forEach(ph=>{ph.packages.forEach(pk=>{pk.tasks.forEach(t=>{if(t.owner)owners.add(t.owner);});});});});});return[...owners].sort();}
-function getOwnerStats(owner){let open=0,done=0,plannedMin=0,trackedMin=0,overdue=0,tasks=[];DB.clients.forEach(c=>{c.projects.forEach(p=>{const st=p.states||{};p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{if(t.owner===owner){const key=pi+'-'+ki+'-'+ti;const isDone=st[key];tasks.push({task:t,client:c.name,project:p.name,key,isDone});if(isDone)done++;else{open++;if(t.min)plannedMin+=Number(t.min)||0;const logged=(t.timeLog||[]).reduce((s,e)=>s+e.d,0);trackedMin+=logged;if(typeof getDueClass==='function'&&getDueClass(t)==='due-overdue')overdue++;}}});});});});});return{open,done,plannedMin,trackedMin,overdue,tasks};}
+function getOwnerStats(owner){let open=0,done=0,plannedMin=0,trackedMin=0,overdue=0,tasks=[];DB.clients.forEach(c=>{c.projects.forEach(p=>{p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{if(t.owner===owner){const key=pi+'-'+ki+'-'+ti;const isDone=(t.status&&t.status!=="Offen");tasks.push({task:t,client:c.name,project:p.name,key,isDone});if(isDone)done++;else{open++;if(t.min)plannedMin+=Number(t.min)||0;const logged=(t.timeLog||[]).reduce((s,e)=>s+e.d,0);trackedMin+=logged;if(typeof getDueClass==='function'&&getDueClass(t)==='due-overdue')overdue++;}}});});});});});return{open,done,plannedMin,trackedMin,overdue,tasks};}
 function renderTeam(){const el=document.getElementById('teamView');if(!el)return;const owners=getAllOwners();if(!owners.length){el.innerHTML='<p style="color:var(--dim);padding:2rem">Keine Team-Mitglieder gefunden. Weise Tasks einen Owner zu.</p>';return;}let h='<div class="team-grid">';owners.forEach(o=>{const s=getOwnerStats(o);const role=teamRoles[o]||'';const total=s.open+s.done;const pct=total?Math.round(s.done/total*100):0;const loadClass=s.open>10?'load-red':s.open>5?'load-yellow':'load-green';h+='<div class="team-card">';h+='<div style="display:flex;justify-content:space-between;align-items:center"><strong>'+esc(o)+'</strong>';h+='<select class="team-role-select" onchange="setTeamRole(\''+esc(o)+'\',this.value);renderTeam()" value="'+esc(role)+'">';['','Content','Design','Dev','PM','Strategy'].forEach(r=>{h+='<option value="'+r+'"'+(r===role?' selected':'')+'>'+( r||'Rolle...')+'</option>';});h+='</select></div>';if(role)h+='<span class="team-role">'+esc(role)+'</span>';h+='<div class="team-stats">';h+='<div class="team-stat"><span>Offen</span><strong>'+s.open+'</strong></div>';h+='<div class="team-stat"><span>Done</span><strong>'+s.done+'</strong></div>';h+='<div class="team-stat"><span>Overdue</span><strong style="color:var(--red)">'+s.overdue+'</strong></div>';h+='</div>';h+='<div class="load-bar"><div class="load-fill '+loadClass+'" style="width:'+pct+'%"></div></div>';h+='<small style="color:var(--dim)">'+pct+'% erledigt</small>';if(s.tasks.filter(t=>!t.isDone).length){h+='<div class="team-tasks-list">';s.tasks.filter(t=>!t.isDone).slice(0,5).forEach(t=>{h+='<div style="font-size:.8rem;padding:2px 0;color:var(--txt)">• '+esc(t.task.t)+' <span style="color:var(--dim)">('+esc(t.client)+')</span></div>';});if(s.tasks.filter(t=>!t.isDone).length>5)h+='<div style="font-size:.75rem;color:var(--dim)">+'+(s.tasks.filter(t=>!t.isDone).length-5)+' weitere...</div>';h+='</div>';}h+='</div>';});h+='</div>';el.innerHTML=h;}
 function setTRPeriod(p){trPeriod=p;renderTimerReport();}
 function getTRRange(){const now=new Date();const y=now.getFullYear(),m=now.getMonth(),d=now.getDay();let start,end=now;if(trPeriod==='week'){start=new Date(now);start.setDate(now.getDate()-d+1);start.setHours(0,0,0,0);}else if(trPeriod==='month'){start=new Date(y,m,1);}else if(trPeriod==='lastMonth'){start=new Date(y,m-1,1);end=new Date(y,m,0,23,59,59);}else if(trPeriod==='year'){start=new Date(y,0,1);}else{start=new Date(y,m,1);}return{start,end};}
@@ -3659,7 +3686,7 @@ if(changed)save();}
 function formatDateDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()]+" "+d.getFullYear();}
 function formatDateShortDE(d){var m=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];return d.getDate()+". "+m[d.getMonth()];}
 function countAllTasks(project){var c=0;project.phases.forEach(function(ph){ph.packages.forEach(function(pk){c+=pk.tasks.length;});});return c;}
-function countDoneTasks(project){var c=0;project.phases.forEach(function(ph,pi){ph.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){if(project.states[pi+"-"+pai+"-"+ti]==="Erledigt")c++;});});});return c;}
+function countDoneTasks(project){var c=0;project.phases.forEach(function(ph,pi){ph.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){if(t.status==="Erledigt")c++;});});});return c;}
 window.openExportModal=function(){var m=document.getElementById("exportModal");var mc=m.querySelector(".modal-content")||m.querySelector(".modal")||m;
 var h='<h3 style="margin:0 0 16px;font-size:17px;font-weight:800;color:var(--text)">Projektstand exportieren</h3>';
 h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;font-weight:700;margin-bottom:12px"><input type="checkbox" id="expAll" onchange="toggleAllExport(this.checked)" style="width:18px;height:18px;accent-color:var(--green)"> Alle Kunden</label>';
@@ -3681,10 +3708,10 @@ md+="## Projekt: "+project.name+"\n";md+="Typ: "+(project.type||"\u2013")+" | La
 md+="Fortschritt: "+pct+"% ("+dt+"/"+tt+")\n";md+="<!-- project_id: "+(project._id||"")+" -->\n\n";
 var tc=0;project.phases.forEach(function(phase,pi){var pe=phase.endDate?formatDateDE(new Date(phase.endDate)):"\u2013";
 md+="### PHASE "+(pi+1)+": "+phase.name.toUpperCase()+" (bis "+pe+")\n";md+="<!-- phase_id: "+(phase._id||"")+" -->\n\n";
-phase.packages.forEach(function(pkg,pai){var pt=pkg.tasks.length;var pd=pkg.tasks.filter(function(t,ti){return project.states[pi+"-"+pai+"-"+ti]==="Erledigt";}).length;
+phase.packages.forEach(function(pkg,pai){var pt=pkg.tasks.length;var pd=pkg.tasks.filter(function(t,ti){return t.status==="Erledigt";}).length;
 md+="#### "+pkg.name+" ("+pd+"/"+pt+" erledigt)\n";md+="<!-- package_id: "+(pkg._id||"")+" -->\n\n";
 md+="| # | Task | Owner | Aufwand | Status | Deadline | Notizen |\n|---|------|-------|---------|--------|----------|--------|\n";
-pkg.tasks.forEach(function(task,ti){tc++;var sk=pi+"-"+pai+"-"+ti;var st=project.states[sk]||"Offen";
+pkg.tasks.forEach(function(task,ti){tc++;var st=task.status||"Offen";
 var auf=task.min?task.min+"m":"\u2013";var dl=task.due?formatDateShortDE(new Date(task.due)):"\u2013";var nt=task.notes||"";
 if(task.due&&st!=="Erledigt"){var now=new Date();now.setHours(0,0,0,0);var dd=new Date(task.due);dd.setHours(0,0,0,0);if(dd<now)nt=(nt?nt+" | ":"")+"\u26a0\ufe0f \u00dcberf\u00e4llig";}
 md+="| "+(pi+1)+"."+tc+" | "+task.t+" <!-- _id:"+(task._id||"")+" --> | "+(task.owner||"\u2013")+" | "+auf+" | "+st+" | "+dl+" | "+nt+" |\n";});md+="\n";});tc=0;});});});return md;}
@@ -3692,7 +3719,7 @@ function generateJSONExport(ci){return JSON.stringify({exportDate:new Date().toI
 clients:ci.map(function(idx){var c=DB.clients[idx];return{_id:c._id,name:c.name,projects:c.projects.map(function(p){return{_id:p._id,name:p.name,type:p.type,launchDate:p.launchDate,startDate:p.startDate,
 states:Object.assign({},p.states),phases:p.phases.map(function(ph,pi){return{_id:ph._id,name:ph.name,color:ph.color,endDate:ph.endDate,
 packages:ph.packages.map(function(pk,pai){return{_id:pk._id,name:pk.name,tasks:pk.tasks.map(function(t,ti){return{_id:t._id,t:t.t,owner:t.owner,min:t.min,due:t.due,notes:t.notes,
-status:p.states[pi+"-"+pai+"-"+ti]||"Offen",ki:t.ki,vor:t.vor,auto:t.auto,links:t.links,timeLog:t.timeLog};})};})};})};})};})},null,2);}
+status:t.status||"Offen",ki:t.ki,vor:t.vor,auto:t.auto,links:t.links,timeLog:t.timeLog};})};})};})};})};})},null,2);}
 function doExport(fmt){var ids=getSelectedExportClients();if(ids.length===0)return alert("Bitte Kunden w\u00e4hlen.");
 var cn=ids.length===1?DB.clients[ids[0]].name.toLowerCase().replace(/[^a-z0-9]/g,"-"):"alle-kunden";var ds=new Date().toISOString().split("T")[0];
 var content,fn,mime;if(fmt==="md"){content=generateMarkdownExport(ids);fn="projektstand-"+cn+"-"+ds+".md";mime="text/markdown";}
@@ -3744,16 +3771,8 @@ function handleImportFile(input) {
   };
   reader.readAsText(file);
 }
-function findTaskKey(project, taskId) {
-  for (var pi = 0; pi < project.phases.length; pi++) {
-    for (var pai = 0; pai < project.phases[pi].packages.length; pai++) {
-      for (var ti = 0; ti < project.phases[pi].packages[pai].tasks.length; ti++) {
-        if (project.phases[pi].packages[pai].tasks[ti]._id === taskId) return pi + "-" + pai + "-" + ti;
-      }
-    }
-  }
-  return null;
-}
+// findTaskKey - DEPRECATED (M-1: status now on task.status)
+function findTaskKey(project, taskId){return null;}
 function computeDiff(importData) {
   var changes = [];
   importData.clients.forEach(function(ic) {
@@ -3772,7 +3791,7 @@ function computeDiff(importData) {
           (ipk.tasks || []).forEach(function(it) {
             var ct = cpk.tasks.find(function(t) { return t._id === it._id; });
             if (!ct) { changes.push({ type: "new_task", severity: "yellow", phase: cph.name, package: cpk.name, data: it }); return; }
-            var stKey = findTaskKey(cp, ct._id); var curSt = (cp.states && cp.states[stKey]) || "Offen";
+            var curSt = ct.status || "Offen";
             if (it.status && it.status !== curSt) changes.push({ type: "status_change", severity: "green", task: ct.t, _id: ct._id, oldStatus: curSt, newStatus: it.status, _project: cp, _stKey: stKey });
             if (it.due !== undefined && it.due !== ct.due) changes.push({ type: "deadline_change", severity: "yellow", task: ct.t, _id: ct._id, oldDeadline: ct.due, newDeadline: it.due, _task: ct });
             if (it.owner !== undefined && it.owner !== ct.owner) changes.push({ type: "owner_change", severity: "yellow", task: ct.t, _id: ct._id, oldOwner: ct.owner, newOwner: it.owner, _task: ct });
@@ -3833,7 +3852,7 @@ function applySelectedChanges() {
   var applied = 0;
   indices.forEach(function(i) {
     var c = changes[i]; if (!c) return;
-    if (c.type === "status_change" && c._project && c._stKey) { if (!c._project.states) c._project.states = {}; c._project.states[c._stKey] = c.newStatus; applied++; }
+    if (c.type === "status_change" && c._project && c._stKey) { if (!c._project.states) c._project.states = {}; c._project.states[c._stKey] = c.newStatus; var _pts=c._stKey.split("-");if(c._project.phases[_pts[0]]&&c._project.phases[_pts[0]].packages[_pts[1]]&&c._project.phases[_pts[0]].packages[_pts[1]].tasks[_pts[2]]){c._project.phases[_pts[0]].packages[_pts[1]].tasks[_pts[2]].status=c.newStatus;} applied++; }
     else if (c.type === "deadline_change" && c._task) { c._task.due = c.newDeadline; applied++; }
     else if (c.type === "owner_change" && c._task) { c._task.owner = c.newOwner; applied++; }
     else if (c.type === "rename_task" && c._task) { c._task.t = c.newName; applied++; }
