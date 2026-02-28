@@ -563,3 +563,94 @@ h+='<button onclick="doExport(\'json\')" style="padding:8px 18px;border-radius:8
 h+='<button onclick="closeExportModal()" style="padding:8px 14px;border-radius:8px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:13px">Abbrechen</button>';
 h+='</div>';mc.innerHTML=h;m.style.display="flex"};
 function findTaskKey(project, taskId){return null;}
+
+
+// === H-3: Undo-System ===
+var _undoStack = [];
+var _redoStack = [];
+var MAX_UNDO = 30;
+
+function pushUndo(label) {
+  try {
+    var snapshot = JSON.stringify(DB);
+    _undoStack.push({ label: label || 'Aktion', data: snapshot, ts: Date.now() });
+    if (_undoStack.length > MAX_UNDO) _undoStack.shift();
+    _redoStack = [];
+    updateUndoUI();
+  } catch (e) {
+    console.warn('[Undo] Snapshot failed:', e);
+  }
+}
+
+function undo() {
+  if (_undoStack.length === 0) {
+    toast('Nichts zum R\u00fcckg\u00e4ngig machen');
+    return;
+  }
+  var entry = _undoStack.pop();
+  try {
+    _redoStack.push({ label: entry.label, data: JSON.stringify(DB), ts: Date.now() });
+    if (_redoStack.length > MAX_UNDO) _redoStack.shift();
+    DB = JSON.parse(entry.data);
+    saveNow();
+    renderAll();
+    toast('R\u00fcckg\u00e4ngig: ' + entry.label, 'info');
+    updateUndoUI();
+  } catch (e) {
+    console.warn('[Undo] Restore failed:', e);
+    toast('Undo fehlgeschlagen', 'error');
+  }
+}
+
+function redo() {
+  if (_redoStack.length === 0) {
+    toast('Nichts zum Wiederholen');
+    return;
+  }
+  var entry = _redoStack.pop();
+  try {
+    _undoStack.push({ label: entry.label, data: JSON.stringify(DB), ts: Date.now() });
+    DB = JSON.parse(entry.data);
+    saveNow();
+    renderAll();
+    toast('Wiederholt: ' + entry.label, 'info');
+    updateUndoUI();
+  } catch (e) {
+    console.warn('[Redo] Restore failed:', e);
+    toast('Redo fehlgeschlagen', 'error');
+  }
+}
+
+function updateUndoUI() {
+  var badge = document.getElementById('undoBadge');
+  if (badge) {
+    badge.textContent = _undoStack.length;
+    badge.style.display = _undoStack.length > 0 ? 'inline-flex' : 'none';
+  }
+  var redoBadge = document.getElementById('redoBadge');
+  if (redoBadge) {
+    redoBadge.textContent = _redoStack.length;
+    redoBadge.style.display = _redoStack.length > 0 ? 'inline-flex' : 'none';
+  }
+}
+
+function clearUndoStack() {
+  _undoStack = [];
+  _redoStack = [];
+  updateUndoUI();
+}
+
+// Keyboard shortcut: Ctrl+Z = undo, Ctrl+Y / Ctrl+Shift+Z = redo
+document.addEventListener('keydown', function(e) {
+  // Don't intercept if user is typing in an input/textarea
+  var tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || e.target.contentEditable === 'true') return;
+  
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    undo();
+  } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    redo();
+  }
+});
