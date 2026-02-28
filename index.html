@@ -1034,6 +1034,7 @@ function load(){
   if(DB.activeClient)expandedClients.add(DB.activeClient);
   // Migrate states from index-keys to task.status
   DB.clients.forEach(function(c){c.projects.forEach(function(p){migrateStatesToTasks(p);});});
+  save(); // Persist migrated task.status to localStorage
   // Phase 2: Async load from Supabase (overrides localStorage if newer)
   loadFromSupabase();
 }
@@ -1211,7 +1212,9 @@ async function loadFromSupabase(){
           });
         });
         if(!DB.clients.length){const c=mkClientWithProject('Beispiel-Kunde','launch');DB.clients.push(c);DB.activeClient=c.id;DB.activeProject=c.projects[0].id;}
-        localStorage.setItem('lr3',JSON.stringify(DB));
+        // M-1: Migrate states to task.status after Supabase load
+      DB.clients.forEach(function(c){c.projects.forEach(function(proj){migrateStatesToTasks(proj);});});
+      localStorage.setItem('lr3',JSON.stringify(DB));
         if(DB.activeClient)expandedClients.add(DB.activeClient);
         renderAll();
       }
