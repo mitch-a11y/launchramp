@@ -537,6 +537,16 @@ function repairCorruptPhases(){
       if(proj.type && proj.type !== "retainer" && proj.type !== "empty" && proj.phases && proj.phases.length < 8){
         dbg("[M-2] Repairing corrupt phases for project: " + proj.name + " (had " + proj.phases.length + " phases)");
         proj.phases = defaultPhases();
+        proj.phases.forEach(function(ph){
+          if(!ph._id) ph._id = "ph_" + Math.random().toString(36).substring(2,10);
+          ph.packages.forEach(function(pk){
+            if(!pk._id) pk._id = "pkg_" + Math.random().toString(36).substring(2,10);
+            pk.tasks.forEach(function(t){
+              if(!t._id) t._id = "t_" + Math.random().toString(36).substring(2,10);
+            });
+          });
+        });
+        dbg("[M-2b] Generated _id for all phases/packages/tasks in: " + proj.name);
       }
     });
   });
