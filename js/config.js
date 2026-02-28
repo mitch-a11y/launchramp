@@ -654,15 +654,6 @@ function esc(s){const d=document.createElement('div');d.textContent=s;return d.i
 // Close modals on backdrop click
 document.querySelectorAll('.modal-bg').forEach(bg=>{bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('show')})});
 
-// INIT
-load();
-// Auto-open first phase and all its packages
-openPhases.add(0);
-const firstClient=getActiveClient();
-if(firstClient&&firstClient.phases[0]){
-  firstClient.phases[0].packages.forEach((_,pai)=>openPackages.add(`0_${pai}`));
-}
-renderAll();
 // === M7: Due-Dates + Overdue ===
 
 function countOverdue(){let c=0;const p=getActiveClient();if(!p)return 0;p.phases.forEach((ph,pi)=>{ph.packages.forEach((pk,ki)=>{pk.tasks.forEach((t,ti)=>{const key=pi+'-'+ki+'-'+ti;if(!st[key]&&getDueClass(t)==='due-overdue')c++;});});});return c;}
