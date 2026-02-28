@@ -2,7 +2,10 @@ var DEBUG=false;
 
 function dbg(){if(DEBUG)console.log.apply(console,arguments);}
 var currentView='tasks';
-// === STATUS MIGRATION: Index-Keys → task.status ===
+
+var _undoStack = [];
+var _redoStack = [];
+var MAX_UNDO = 30;// === STATUS MIGRATION: Index-Keys → task.status ===
 function migrateStatesToTasks(c){
   if(!c||!c.phases)return;
   var migrated=0;
@@ -566,9 +569,6 @@ function findTaskKey(project, taskId){return null;}
 
 
 // === H-3: Undo-System ===
-var _undoStack = [];
-var _redoStack = [];
-var MAX_UNDO = 30;
 
 function pushUndo(label) {
   try {
