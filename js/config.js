@@ -69,7 +69,7 @@ let sbClient = null;
 let isOnline = true;
 let syncInProgress = false;
 let lastRemoteUpdate = null;
-let lastKnownRemote = null; // Baseline for conflict detection
+var lastKnownRemote = null; try{lastKnownRemote=JSON.parse(localStorage.getItem("lr3_baseline"));}catch(ebl){} // S-2: Baseline for conflict detection
 
 // Initialize Supabase
 try {
@@ -395,6 +395,8 @@ function mergeProjects(localProjects, remoteProjects, baseProjects){
     if(local && remote && base){
       // Merge states (most important!)
       mergedProj.states = mergeStates(local.states||{}, remote.states||{}, base.states||{});
+    // S-2: Deep-merge phases/packages/tasks
+    mergedProj.phases = mergePhases(local.phases||[], remote.phases||[], base.phases||[]);
       // Merge timeLog (append unique entries)
       const remoteLogSet = new Set((remote.timeLog||[]).map(e => e.start));
       const baseLogSet = new Set((base.timeLog||[]).map(e => e.start));
@@ -430,10 +432,99 @@ function mergeProjects(localProjects, remoteProjects, baseProjects){
     } else if(local && remote){
       // No base - remote wins but keep local states
       mergedProj.states = Object.assign({}, remote.states||{}, local.states||{});
+    mergedProj.phases = mergePhases(local.phases||[], remote.phases||[], []);
     }
     merged.push(mergedProj);
   });
 
+  return merged;
+}
+
+// === S-2: Deep-Merge für Phases/Packages/Tasks ===
+function mergePhases(localPhases, remotePhases, basePhases){
+  var baseMap = {}; (basePhases||[]).forEach(function(p){ baseMap[p._id] = p; });
+  var localMap = {}; (localPhases||[]).forEach(function(p){ localMap[p._id] = p; });
+  var remoteMap = {};(remotePhases||[]).forEach(function(p){ remoteMap[p._id] = p; });
+  var seen = {}; var allIds = [];
+  (localPhases||[]).concat(remotePhases||[]).forEach(function(p){ if(!seen[p._id]){ seen[p._id]=true; allIds.push(p._id); }});
+  var merged = [];
+  allIds.forEach(function(id){
+    var base = baseMap[id]; var local = localMap[id]; var remote = remoteMap[id];
+    if(!local && remote && base) return;
+    if(local && !remote && base) return;
+    if(local && !remote && !base){ merged.push(deepClone(local)); return; }
+    if(!local && remote && !base){ merged.push(deepClone(remote)); return; }
+    if(local && !remote) return;
+    var mp = deepClone(remote);
+    if(local && remote && base){
+      mp.packages = mergePackages(local.packages||[], remote.packages||[], base.packages||[]);
+      if(local.title !== base.title && remote.title === base.title) mp.title = local.title;
+    } else if(local && remote){
+      mp.packages = mergePackages(local.packages||[], remote.packages||[], []);
+    }
+    merged.push(mp);
+  });
+  return merged;
+}
+
+function mergePackages(localPkgs, remotePkgs, basePkgs){
+  var baseMap = {}; (basePkgs||[]).forEach(function(p){ baseMap[p._id] = p; });
+  var localMap = {}; (localPkgs||[]).forEach(function(p){ localMap[p._id] = p; });
+  var remoteMap = {};(remotePkgs||[]).forEach(function(p){ remoteMap[p._id] = p; });
+  var seen = {}; var allIds = [];
+  (localPkgs||[]).concat(remotePkgs||[]).forEach(function(p){ if(!seen[p._id]){ seen[p._id]=true; allIds.push(p._id); }});
+  var merged = [];
+  allIds.forEach(function(id){
+    var base = baseMap[id]; var local = localMap[id]; var remote = remoteMap[id];
+    if(!local && remote && base) return;
+    if(local && !remote && base) return;
+    if(local && !remote && !base){ merged.push(deepClone(local)); return; }
+    if(!local && remote && !base){ merged.push(deepClone(remote)); return; }
+    if(local && !remote) return;
+    var mp = deepClone(remote);
+    if(local && remote && base){
+      mp.tasks = mergeTasks(local.tasks||[], remote.tasks||[], base.tasks||[]);
+      if(local.title !== base.title && remote.title === base.title) mp.title = local.title;
+    } else if(local && remote){
+      mp.tasks = mergeTasks(local.tasks||[], remote.tasks||[], []);
+    }
+    merged.push(mp);
+  });
+  return merged;
+}
+
+function mergeTasks(localTasks, remoteTasks, baseTasks){
+  var baseMap = {}; (baseTasks||[]).forEach(function(t){ baseMap[t._id] = t; });
+  var localMap = {}; (localTasks||[]).forEach(function(t){ localMap[t._id] = t; });
+  var remoteMap = {};(remoteTasks||[]).forEach(function(t){ remoteMap[t._id] = t; });
+  var seen = {}; var allIds = [];
+  (localTasks||[]).concat(remoteTasks||[]).forEach(function(t){ if(!seen[t._id]){ seen[t._id]=true; allIds.push(t._id); }});
+  var merged = [];
+  allIds.forEach(function(id){
+    var base = baseMap[id]; var local = localMap[id]; var remote = remoteMap[id];
+    if(!local && remote && base) return;
+    if(local && !remote && base) return;
+    if(local && !remote && !base){ merged.push(deepClone(local)); return; }
+    if(!local && remote && !base){ merged.push(deepClone(remote)); return; }
+    if(local && !remote) return;
+    var mt = deepClone(remote);
+    if(local && remote && base){
+      var fields = ["status","owner","deadline","title","link","scheduledDate","scheduledSlot"];
+      for(var fi=0; fi<fields.length; fi++){
+        var f = fields[fi];
+        if(local[f] !== (base[f]||"") && remote[f] === (base[f]||"")){
+          mt[f] = local[f];
+        }
+      }
+    } else if(local && remote){
+      var fields2 = ["status","owner","deadline","title","link","scheduledDate","scheduledSlot"];
+      for(var fi2=0; fi2<fields2.length; fi2++){
+        var f2 = fields2[fi2];
+        if(local[f2] && !remote[f2]) mt[f2] = local[f2];
+      }
+    }
+    merged.push(mt);
+  });
   return merged;
 }
 
@@ -474,9 +565,11 @@ async function loadFromSupabase(){
       }
       // Store baseline for future merge
       lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+        try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
     } else if(DB.clients.length>0){
       dbg('[Supabase] Remote empty, pushing local data');
       lastKnownRemote = deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+        try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
       await saveToSupabaseDirect();
     }
     isOnline=true;
