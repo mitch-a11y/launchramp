@@ -3998,6 +3998,145 @@ function copyAllNotifs() {
 }
 function showToast(msg) { var el = document.getElementById("notifToast"); if(!el) return; el.textContent = msg; el.style.display = "block"; setTimeout(function() { el.style.display = "none"; }, 3000); }
 setTimeout(function() { if (typeof migrateUUIDs === "function") migrateUUIDs(); }, 2000);
+
+
+function runSmokeTests(){
+  var results=[];var pass=0;var fail=0;
+  function assert(name,condition,detail){
+    if(condition){pass++;results.push("PASS: "+name)}
+    else{fail++;results.push("FAIL: "+name+(detail?" — "+detail:""))}
+  }
+  var c=getActiveClient();
+
+  // === 1. FUNCTION EXISTENCE (34 core functions) ===
+  var coreFns=["getActiveClient","save","renderAll","toast","esc","cycle","setSt",
+    "toggleTimer","getTrackedMins","renderTasks","renderTaskRowHtml","renderPhaseHeaderHtml",
+    "renderPackageHeaderHtml","renderDashboard","setView","toggleP","toggleW",
+    "editPhase","duplicatePhase","deletePhaseInline","openAddPackage","openAddTask",
+    "editTask","editDeadline","setOwner","editTaskLink","editTaskTime",
+    "defaultPhases","migrateStatesToTasks","getTaskStatus","setTaskStatus",
+    "resolvePhaseIdx","resolvePkgIdx","resolveTaskIdx","resolveTaskById",
+    "rebuildStates","phasePct","dbg","logActivity","countDoneTasks"];
+  coreFns.forEach(function(fn){
+    assert("fn:"+fn, typeof window[fn]==="function");
+  });
+
+  // === 2. DATA MODEL INTEGRITY ===
+  assert("data:client_exists", !!c, "getActiveClient() returned falsy");
+  if(c){
+    assert("data:has_phases", Array.isArray(c.phases)&&c.phases.length>0);
+    assert("data:phase_count", c.phases.length===8, "expected 8, got "+c.phases.length);
+    
+    var totalTasks=0;var missingId=0;var missingStatus=0;
+    c.phases.forEach(function(ph){
+      assert("data:phase_has_id", !!ph._id, "phase missing _id");
+      assert("data:phase_has_name", !!ph.name);
+      assert("data:phase_has_packages", Array.isArray(ph.packages)&&ph.packages.length>0);
+      ph.packages.forEach(function(pkg){
+        assert("data:pkg_has_id", !!pkg._id, "pkg missing _id");
+        pkg.tasks.forEach(function(t){
+          totalTasks++;
+          if(!t._id)missingId++;
+          if(!t.status)missingStatus++;
+        });
+      });
+    });
+    assert("data:task_count", totalTasks===75, "expected 75, got "+totalTasks);
+    assert("data:all_tasks_have_id", missingId===0, missingId+" tasks missing _id");
+    assert("data:all_tasks_have_status", missingStatus===0, missingStatus+" tasks missing status");
+  }
+
+  // === 3. RESOLVER FUNCTIONS ===
+  if(c&&c.phases.length>0){
+    var firstPhase=c.phases[0];
+    var firstPkg=firstPhase.packages[0];
+    var firstTask=firstPkg.tasks[0];
+    
+    assert("resolve:phaseIdx", resolvePhaseIdx(c,firstPhase._id)===0);
+    assert("resolve:pkgIdx", resolvePkgIdx(firstPhase,firstPkg._id)===0);
+    assert("resolve:taskIdx", resolveTaskIdx(firstPkg,firstTask._id)===0);
+    
+    var resolved=resolveTaskById(c,firstTask._id);
+    assert("resolve:taskById_found", !!resolved);
+    if(resolved){
+      assert("resolve:taskById_pi", resolved.pi===0);
+      assert("resolve:taskById_pai", resolved.pai===0);
+      assert("resolve:taskById_ti", resolved.ti===0);
+      assert("resolve:taskById_task", resolved.task===firstTask);
+    }
+    
+    assert("resolve:invalid_returns_neg", resolvePhaseIdx(c,"NONEXISTENT")===-1);
+    assert("resolve:invalid_taskById", resolveTaskById(c,"NONEXISTENT")===null);
+  }
+
+  // === 4. STATUS CYCLE ROUNDTRIP ===
+  if(c&&c.phases.length>0){
+    var testTask=c.phases[0].packages[0].tasks[0];
+    var origStatus=testTask.status;
+    var testId=testTask._id;
+    
+    setTaskStatus(c,testId,"In Arbeit");
+    assert("cycle:setSt_works", testTask.status==="In Arbeit", "got: "+testTask.status);
+    
+    var readBack=getTaskStatus(c,testId);
+    assert("cycle:getStatus_matches", readBack==="In Arbeit", "got: "+readBack);
+    
+    setTaskStatus(c,testId,origStatus);
+    assert("cycle:restore_original", testTask.status===origStatus);
+  }
+
+  // === 5. ESC() HTML ESCAPING ===
+  assert("esc:basic", esc("<b>test</b>")==="&lt;b&gt;test&lt;/b&gt;");
+  assert("esc:ampersand", esc("A&B").indexOf("&amp;")!==-1);
+  assert("esc:quotes", esc('"hello"').indexOf("&quot;")!==-1);
+  assert("esc:empty", esc("")==="");
+
+  // === 6. PHASEPCT CALCULATION ===
+  if(c&&c.phases.length>0){
+    var pct=phasePct(0);
+    assert("phasePct:returns_number", typeof pct==="number");
+    assert("phasePct:in_range", pct>=0&&pct<=100, "got: "+pct);
+  }
+
+  // === 7. DEFAULT PHASES ===
+  var dp=defaultPhases();
+  assert("defaults:is_array", Array.isArray(dp));
+  assert("defaults:has_phases", dp.length>0);
+  assert("defaults:deep_clone", dp!==defaultPhases(), "should return new copy each time");
+  if(dp.length>0){
+    assert("defaults:phase_has_name", !!dp[0].name);
+    assert("defaults:phase_has_packages", Array.isArray(dp[0].packages));
+  }
+
+  // === 8. VIEW GUARD ===
+  assert("view:currentView_exists", typeof currentView==="string");
+  assert("view:valid_value", ["tasks","docs","team","insights","templates"].indexOf(currentView)!==-1, "got: "+currentView);
+
+  // === 9. DEBOUNCE ===
+  assert("debounce:saveNow_exists", typeof saveNow==="function");
+
+  // === 10. DEBUG MODE ===
+  assert("debug:DEBUG_exists", typeof DEBUG!=="undefined");
+  assert("debug:dbg_exists", typeof dbg==="function");
+
+  // === SUMMARY ===
+  var summary="\n=== SMOKE TEST RESULTS ===\n";
+  summary+="PASS: "+pass+" / FAIL: "+fail+" / TOTAL: "+(pass+fail)+"\n";
+  if(fail>0){
+    summary+="\nFAILURES:\n";
+    results.forEach(function(r){if(r.indexOf("FAIL")===0)summary+=r+"\n"});
+  }
+  summary+="========================\n";
+  console.warn(summary);
+  
+  var el=document.createElement("pre");
+  el.id="smokeTestOutput";
+  el.style.cssText="position:fixed;top:10px;right:10px;z-index:99999;background:#111;color:#0f0;padding:20px;border-radius:8px;font-size:12px;max-height:80vh;overflow:auto;white-space:pre-wrap;min-width:400px;";
+  el.textContent=summary;
+  document.body.appendChild(el);
+  
+  return {pass:pass,fail:fail,total:pass+fail,results:results};
+}
 </script>
 <!-- M10 Modals -->
 <div id="exportModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'" style="display:none"><div class="modal"><div class="modal-content" style="max-width:480px">
