@@ -2432,10 +2432,36 @@ function getPhaseHealth(phase,pct,done,total){
   // Behind schedule
   return{color:ORANGE,icon:'⏳'};
 }
-function renderTasks(){
-  const c=getActiveClient();let h='';
-  c.phases.forEach((phase,pi)=>{
-    let tt=0,dd=0;
+
+
+
+// M-2: Extracted from renderTasks() — package header block
+function renderPackageHeaderHtml(pkg,pai,pi,c){
+const wKey=`${pi}_${pai}`;
+      const wOpen=openPackages.has(wKey);
+      // Package task count
+      let ptt=0,pdd=0;
+      pkg.tasks.forEach((t,ti)=>{ptt++;if(((t.status||'Offen'))==='Erledigt')pdd++});
+      const ppct=ptt?Math.round(pdd/ptt*100):0;
+        let pkgPlanMins=0,pkgActualMins=0;
+        pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=`${pi}-${pai}-${ti}`;pkgActualMins+=getTrackedMins(c,tid);});
+        const pkgTimeHtml=pkgPlanMins>0?`<span class="pkg-time">${pkgActualMins}/${pkgPlanMins}min</span>`:"";;
+
+      return `<div class="wp-wrap" data-pi="${pi}" data-pai="${pai}" draggable="true" ondragstart="dragPkgStart(event,${pi},${pai})" ondragend="dragPkgEnd(event)" ondragover="dragPkgOver(event,${pi},${pai})" ondragleave="dragPkgLeave(event)" ondrop="dropPkg(event,${pi},${pai})">
+      <div class="wp-head" onclick="toggleW(${pi},${pai})">
+        <span class="drag-handle" title="Kategorie verschieben" onmousedown="event.stopPropagation()">⠿</span>
+        <span class="wp-chev${wOpen?' open':''}" id="wc${pi}_${pai}">▶</span>
+        <span class="wp-name">${esc(pkg.name)}</span>${pkgTimeHtml}
+        <span style="font-size:10px;color:var(--text3);margin-left:6px">${pdd}/${ptt}</span>
+        ${ppct===100?'<span style="font-size:9px;color:var(--green);margin-left:4px">✓</span>':''}
+        <button class="btn sm int-col" style="margin-left:auto;opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();renamePackage(${pi},${pai})">✏️</button>
+        <button class="btn sm int-col danger" style="opacity:0;transition:opacity .15s;font-size:9px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();deletePackage(${pi},${pai})">✕</button>
+      </div><div class="wp-body${wOpen?' open':''}" id="wb${pi}_${pai}">`;
+}
+
+// M-2: Extracted from renderTasks() — phase header block
+function renderPhaseHeaderHtml(phase,pi,c){
+let tt=0,dd=0;
     phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if(((t.status||'Offen'))==='Erledigt')dd++}));
     const pct=tt?Math.round(dd/tt*100):0;
       let phasePlanMins=0,phaseActualMins=0;
@@ -2448,7 +2474,7 @@ function renderTasks(){
     // Phase health color: green=on track, orange=behind, red=overdue, blue=future, bright green=done
     const phaseBarInfo=getPhaseHealth(phase,pct,dd,tt);
 
-    h+=`<div class="phase-block" data-pi="${pi}" draggable="true" ondragstart="dragPhaseStart(event,${pi})" ondragend="dragPhaseEnd(event)" ondragover="dragPhaseOver(event,${pi})" ondragleave="dragPhaseLeave(event)" ondrop="dropPhase(event,${pi})">
+    return `<div class="phase-block" data-pi="${pi}" draggable="true" ondragstart="dragPhaseStart(event,${pi})" ondragend="dragPhaseEnd(event)" ondragover="dragPhaseOver(event,${pi})" ondragleave="dragPhaseLeave(event)" ondrop="dropPhase(event,${pi})">
       <div class="phase-head" onclick="toggleP(${pi})" style="border-left:3px solid ${phaseBarInfo.color}">
         <div class="phase-left">
           <span class="drag-handle" title="Phase verschieben" onmousedown="event.stopPropagation()">⠿</span>
@@ -2471,48 +2497,11 @@ function renderTasks(){
         </div>
       </div>
       <div class="phase-body${pOpen?' open':''}" id="pb${pi}">`;
+}
 
-    phase.packages.forEach((pkg,pai)=>{
-      const wKey=`${pi}_${pai}`;
-      const wOpen=openPackages.has(wKey);
-      // Package task count
-      let ptt=0,pdd=0;
-      pkg.tasks.forEach((t,ti)=>{ptt++;if(((t.status||'Offen'))==='Erledigt')pdd++});
-      const ppct=ptt?Math.round(pdd/ptt*100):0;
-        let pkgPlanMins=0,pkgActualMins=0;
-        pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=`${pi}-${pai}-${ti}`;pkgActualMins+=getTrackedMins(c,tid);});
-        const pkgTimeHtml=pkgPlanMins>0?`<span class="pkg-time">${pkgActualMins}/${pkgPlanMins}min</span>`:"";;
-
-      h+=`<div class="wp-wrap" data-pi="${pi}" data-pai="${pai}" draggable="true" ondragstart="dragPkgStart(event,${pi},${pai})" ondragend="dragPkgEnd(event)" ondragover="dragPkgOver(event,${pi},${pai})" ondragleave="dragPkgLeave(event)" ondrop="dropPkg(event,${pi},${pai})">
-      <div class="wp-head" onclick="toggleW(${pi},${pai})">
-        <span class="drag-handle" title="Kategorie verschieben" onmousedown="event.stopPropagation()">⠿</span>
-        <span class="wp-chev${wOpen?' open':''}" id="wc${pi}_${pai}">▶</span>
-        <span class="wp-name">${esc(pkg.name)}</span>${pkgTimeHtml}
-        <span style="font-size:10px;color:var(--text3);margin-left:6px">${pdd}/${ptt}</span>
-        ${ppct===100?'<span style="font-size:9px;color:var(--green);margin-left:4px">✓</span>':''}
-        <button class="btn sm int-col" style="margin-left:auto;opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();renamePackage(${pi},${pai})">✏️</button>
-        <button class="btn sm int-col danger" style="opacity:0;transition:opacity .15s;font-size:9px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();deletePackage(${pi},${pai})">✕</button>
-      </div><div class="wp-body${wOpen?' open':''}" id="wb${pi}_${pai}">`;
-
-      // Compute task deadlines based on phase dates + cumulative minutes
-      let phaseTaskDeadlines=[];
-      if(phase.startDate&&phase.endDate){
-        const pS=new Date(phase.startDate),pE=new Date(phase.endDate);
-        const pSpan=pE-pS;
-        let cumMin=0,totalMin=0;
-        phase.packages.forEach(pk=>pk.tasks.forEach(t=>totalMin+=(t.min||30)));
-        phase.packages.forEach(pk=>pk.tasks.forEach(t=>{
-          cumMin+=(t.min||30);
-          const ratio=totalMin>0?cumMin/totalMin:1;
-          const dl=new Date(pS.getTime()+ratio*pSpan);
-          phaseTaskDeadlines.push(dl);
-        }));
-      }
-      let flatIdx=(function(){let n=0;for(let x=0;x<pai;x++)n+=phase.packages[x].tasks.length;return n})();
-
-      pkg.tasks.forEach((task,ti)=>{
-        
-        const id=`${pi}-${pai}-${ti}`;
+// M-2: Extracted from renderTasks() — single task row HTML
+function renderTaskRowHtml(task,ti,pi,pai,c,phaseTaskDeadlines,flatIdxVal){
+const id=`${pi}-${pai}-${ti}`;
         const st=task.status||'Offen';
         const cc=st==='Erledigt'?'done':st==='In Arbeit'?'wip':st==='Warte auf Kunde'?'wait':'';
         const ci=st==='Erledigt'?'✓':st==='In Arbeit'?'●':st==='Warte auf Kunde'?'◔':'';
@@ -2522,7 +2511,7 @@ function renderTasks(){
         const sLink=task.links.sop||'';
         // Deadline badge
         let dlBadge='';
-        {const dl=task.customDeadline?new Date(task.customDeadline):(phaseTaskDeadlines.length>0&&flatIdx<phaseTaskDeadlines.length?phaseTaskDeadlines[flatIdx]:null);
+        {const dl=task.customDeadline?new Date(task.customDeadline):(phaseTaskDeadlines.length>0&&flatIdxVal<phaseTaskDeadlines.length?phaseTaskDeadlines[flatIdxVal]:null);
         if(dl){
           const now=new Date();
           const daysLeft=Math.ceil((dl-now)/864e5);
@@ -2537,8 +2526,7 @@ function renderTasks(){
             dlBadge=`<span class="dl-badge dl-over" onclick="editDeadline(${pi},${pai},${ti},event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr} (${Math.abs(daysLeft)}d über)</span>`;
           }
         }}
-        flatIdx++;
-        const tracked=getTrackedMins(c,id);
+                const tracked=getTrackedMins(c,id);
         const planPct=mins>0?Math.min(Math.round(tracked/mins*100),200):0;
         const planCol=planPct<=100?"green":planPct<=150?"yellow":"red";
         const planBarHtml=mins>0&&(tracked>0||st==="Erledigt")?`<span class="plan-bar" title="${tracked}/${mins}min (${planPct}%)"><span class="plan-bar-track"><span class="plan-bar-fill ${planCol}" style="width:${Math.min(planPct,100)}%"></span></span><span class="plan-bar-label">${tracked}/${mins}</span></span>`:"";;
@@ -2556,7 +2544,7 @@ function renderTasks(){
           ?`<span class="link-btn has-link" onclick="window.open('${esc(sLink)}','_blank')" title="${esc(sLink)}">🎬 SOP <span class="gear" onclick="event.stopPropagation();editTaskLink(${pi},${pai},${ti},'sop')">⚙</span></span>`
           :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'sop')">🎬 SOP</span>`;
       var noteIcon=task.notes?'<span class="note-icon" title="'+esc(task.notes)+'">📝</span>':'';
-        h+=`<div class="task-row ${(task.status==='Offen'&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
+        return `<div class="task-row ${(task.status==='Offen'&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
           <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}${noteIcon}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
@@ -2570,7 +2558,33 @@ function renderTasks(){
           ${dlBadge}
           <div class="task-actions int-col"><button class="task-action" onclick="editTask(${pi},${pai},${ti})" title="Bearbeiten">✏️</button></div>
         </div>`;
-      });
+}
+
+function renderTasks(){
+  const c=getActiveClient();let h='';
+  c.phases.forEach((phase,pi)=>{
+    h+=renderPhaseHeaderHtml(phase,pi,c);
+
+    phase.packages.forEach((pkg,pai)=>{
+      h+=renderPackageHeaderHtml(pkg,pai,pi,c);
+
+      // Compute task deadlines based on phase dates + cumulative minutes
+      let phaseTaskDeadlines=[];
+      if(phase.startDate&&phase.endDate){
+        const pS=new Date(phase.startDate),pE=new Date(phase.endDate);
+        const pSpan=pE-pS;
+        let cumMin=0,totalMin=0;
+        phase.packages.forEach(pk=>pk.tasks.forEach(t=>totalMin+=(t.min||30)));
+        phase.packages.forEach(pk=>pk.tasks.forEach(t=>{
+          cumMin+=(t.min||30);
+          const ratio=totalMin>0?cumMin/totalMin:1;
+          const dl=new Date(pS.getTime()+ratio*pSpan);
+          phaseTaskDeadlines.push(dl);
+        }));
+      }
+      let flatIdx=(function(){let n=0;for(let x=0;x<pai;x++)n+=phase.packages[x].tasks.length;return n})();
+
+      pkg.tasks.forEach(function(task,ti){ h+=renderTaskRowHtml(task,ti,pi,pai,c,phaseTaskDeadlines,flatIdx); flatIdx++; });
       h+=`<div class="add-row"><button class="add-btn" onclick="openAddTask(${pi},${pai})">+ Aufgabe</button></div></div></div>`;
     });
     // Add category button within phase
