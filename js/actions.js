@@ -531,7 +531,8 @@ function toggleClientExpand(id,e){
   if(expandedClients.has(id))expandedClients.delete(id);else expandedClients.add(id);
   renderSidebar();
 }
-function delClient(id,e){e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}save();renderAll();toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();save();renderAll();}
+function delClient(id,e){
+  pushUndo('Kunde gelöscht');e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}save();renderAll();toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();save();renderAll();}
   pushUndo('Kunde gel\u00f6scht');
 
 function delProject(clientId,projId,e){
@@ -595,7 +596,8 @@ function addCustomLink(){
   toast('Link hinzugef\u00fcgt');
 }
 function editTitle(){const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput');i.value=getActiveClient().name;s.style.display='none';i.style.display='inline-block';i.focus();i.select()}
-function saveTitle(){const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput'),v=i.value.trim()||'Projekt';s.style.display='';i.style.display='none';getActiveClient().name=v;save();renderAll()}
+function saveTitle(){
+  pushUndo('Titel gespeichert');const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput'),v=i.value.trim()||'Projekt';s.style.display='';i.style.display='none';getActiveClient().name=v;save();renderAll()}
   pushUndo('Titel gespeichert');
 
 function setProjectStart(val){
@@ -824,11 +826,14 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
 }
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
-function cycle(id){const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+function cycle(id){
+  pushUndo('Status geändert');const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
   pushUndo('Status ge\u00e4ndert');
-function setSt(id,v){var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
+function setSt(id,v){
+  pushUndo('Status gesetzt');var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
   pushUndo('Status gesetzt');
-function setOwner(pi,pai,ti,sel){const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
+function setOwner(pi,pai,ti,sel){
+  pushUndo('Owner geändert');const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
   pushUndo('Owner ge\u00e4ndert');
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
 
@@ -1168,9 +1173,11 @@ function saveJFLink(){/* legacy – no longer used */}
 
 let curDocId=null;
 function editLink(id,name){curDocId=id;document.getElementById('linkName').textContent=name;document.getElementById('linkUrl').value=getActiveClient().docLinks[id]||'';openModal('linkModal')}
-function saveLink(){if(!curDocId)return;const u=document.getElementById('linkUrl').value.trim();if(u)getActiveClient().docLinks[curDocId]=u;save();closeModal('linkModal');renderDocs();toast('Link gespeichert')}
+function saveLink(){
+  pushUndo('Dok-Link gespeichert');if(!curDocId)return;const u=document.getElementById('linkUrl').value.trim();if(u)getActiveClient().docLinks[curDocId]=u;save();closeModal('linkModal');renderDocs();toast('Link gespeichert')}
   pushUndo('Dok-Link gespeichert');
-function removeLink(){if(!curDocId)return;delete getActiveClient().docLinks[curDocId];save();closeModal('linkModal');renderDocs()}
+function removeLink(){
+  pushUndo('Dok-Link entfernt');if(!curDocId)return;delete getActiveClient().docLinks[curDocId];save();closeModal('linkModal');renderDocs()}
   pushUndo('Dok-Link entfernt');
 function openDocLink(id){const u=getActiveClient().docLinks[id];if(u)window.open(u,'_blank');else toast('Noch kein Link konfiguriert')}
 
