@@ -6,6 +6,26 @@ var currentView='tasks';
 var _undoStack = [];
 var _redoStack = [];
 var MAX_UNDO = 30;// === STATUS MIGRATION: Index-Keys → task.status ===
+
+// === S-1: Event-Bus ===
+var Bus = {
+  _: {},
+  on: function(evt, fn) {
+    if (!this._[evt]) this._[evt] = [];
+    this._[evt].push(fn);
+  },
+  off: function(evt, fn) {
+    if (!this._[evt]) return;
+    this._[evt] = this._[evt].filter(function(f) { return f !== fn; });
+  },
+  emit: function(evt, data) {
+    var fns = this._[evt];
+    if (!fns) return;
+    for (var i = 0; i < fns.length; i++) {
+      try { fns[i](data); } catch(e) { console.warn("[Bus] Error in " + evt + ":", e); }
+    }
+  }
+};
 function migrateStatesToTasks(c){
   if(!c||!c.phases)return;
   var migrated=0;
