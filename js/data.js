@@ -347,6 +347,7 @@ function setupRealtimeSubscription(){
       } else {
         DB.clients=newData.clients||[];
       }
+      repairCorruptPhases(); // M-2: Fix corrupt phases in realtime updates
       lastKnownRemote=deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
       try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
       localStorage.setItem('lr3',JSON.stringify(DB));
