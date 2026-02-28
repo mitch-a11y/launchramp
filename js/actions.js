@@ -505,7 +505,7 @@ function duplicateRetainer(projId){
   // Mark old as completed
   src.completed=true;
   DB.activeProject=newProj.id;
-  save();renderAll();
+  Bus.emit('data:changed');
   toast('Neuer Retainer-Monat erstellt');
 }
 
@@ -518,13 +518,13 @@ function switchClient(id){
   // Switch to first non-completed project, or first project
   const activeProj=client.projects.find(p=>!p.completed)||client.projects[0];
   if(activeProj)DB.activeProject=activeProj.id;
-  dashboardActive=false;save();renderAll();
+  dashboardActive=false;Bus.emit('data:changed');
 }
 function switchProject(clientId,projId,e){
   pushUndo('Projekt gewechselt');
   if(e)e.stopPropagation();
   DB.activeClient=clientId;DB.activeProject=projId;
-  dashboardActive=false;save();renderAll();
+  dashboardActive=false;Bus.emit('data:changed');
 }
 function toggleClientExpand(id,e){
   if(e)e.stopPropagation();
@@ -532,7 +532,7 @@ function toggleClientExpand(id,e){
   renderSidebar();
 }
 function delClient(id,e){
-  pushUndo('Kunde gelöscht');e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}save();renderAll();toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();save();renderAll();}
+  pushUndo('Kunde gelöscht');e.stopPropagation();if(DB.clients.length<=1)return toast('Mind. 1 Kunde');if(!confirm('Kunde und alle Projekte löschen?'))return;DB.clients=DB.clients.filter(c=>c.id!==id);if(DB.activeClient===id){DB.activeClient=DB.clients[0].id;const ap=DB.clients[0].projects[0];DB.activeProject=ap?ap.id:null}Bus.emit('data:changed');toast('Gelöscht')}function renameClientInline(cid){const cl=DB.clients.find(x=>x.id===cid);if(!cl)return;const nn=prompt('Kundenname:',cl.name);if(!nn||!nn.trim())return;cl.name=nn.trim();Bus.emit('data:changed');}
   pushUndo('Kunde gel\u00f6scht');
 
 function delProject(clientId,projId,e){
@@ -543,13 +543,13 @@ function delProject(clientId,projId,e){
   if(!confirm('Projekt löschen?'))return;
   client.projects=client.projects.filter(p=>p.id!==projId);
   if(DB.activeProject===projId)DB.activeProject=client.projects[0].id;
-  save();renderAll();toast('Projekt gelöscht');
+  Bus.emit('data:changed');toast('Projekt gelöscht');
 }
 function showDashboard(){dashboardActive=true;renderAll()}
 function toggleProjectComplete(){
   pushUndo('Projekt-Status');
   const p=getActiveClient();if(!p)return;
-  p.completed=!p.completed;save();renderAll();
+  p.completed=!p.completed;Bus.emit('data:changed');
   toast(p.completed?'Projekt abgeschlossen':'Projekt reaktiviert');
 }
 
@@ -597,14 +597,14 @@ function addCustomLink(){
 }
 function editTitle(){const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput');i.value=getActiveClient().name;s.style.display='none';i.style.display='inline-block';i.focus();i.select()}
 function saveTitle(){
-  pushUndo('Titel gespeichert');const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput'),v=i.value.trim()||'Projekt';s.style.display='';i.style.display='none';getActiveClient().name=v;save();renderAll()}
+  pushUndo('Titel gespeichert');const s=document.getElementById('clientTitle'),i=document.getElementById('clientTitleInput'),v=i.value.trim()||'Projekt';s.style.display='';i.style.display='none';getActiveClient().name=v;Bus.emit('data:changed');}
   pushUndo('Titel gespeichert');
 
 function setProjectStart(val){
   pushUndo('Startdatum gesetzt');
   const c=getActiveClient();
   c.startDate=val;
-  save();renderAll();renderMiniTimeline();
+  Bus.emit('data:changed');renderMiniTimeline();
   toast('Startdatum gesetzt');
 }
 
@@ -636,7 +636,7 @@ function recalcDeadlines(){
   const lastEnd=new Date(c.phases[c.phases.length-1].endDate);
   lastEnd.setDate(lastEnd.getDate()+2);
   c.launchDate=lastEnd.toISOString().split('T')[0];
-  save();renderAll();
+  Bus.emit('data:changed');
   toast('Deadlines berechnet: '+c.phases.length+' Phasen verteilt');
 }
 
@@ -665,7 +665,7 @@ function openAddPackage(pi){
   const c=getActiveClient();
 if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   c.phases[pi].packages.push({name:name.trim(),tasks:[]});
-  save();renderAll();toast('Kategorie hinzugefügt');
+  Bus.emit('data:changed');toast('Kategorie hinzugefügt');
   // Auto-open the phase and new package
   if(!openPhases.has(pi)){openPhases.add(pi)}
   const newPai=c.phases[pi].packages.length-1;
@@ -679,14 +679,14 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phase
   const name=prompt('Kategorie umbenennen:',c.phases[pi].packages[pai].name);
   if(!name||!name.trim())return;
   c.phases[pi].packages[pai].name=name.trim();
-  save();renderTasks();applyFilters();toast('Kategorie umbenannt');
+  Bus.emit('tasks:changed');applyFilters();toast('Kategorie umbenannt');
 }
 function deletePackage(pi,pai){
   pushUndo('Kategorie gel\u00f6scht');
   if(!confirm('Kategorie und alle enthaltenen Aufgaben löschen?'))return;
   getActiveClient().phases[pi].packages.splice(pai,1);
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
-  rebuildStates(getActiveClient());save();renderAll();toast('Kategorie gelöscht');
+  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('Kategorie gelöscht');
 }
 
 // ============================================================
@@ -761,7 +761,7 @@ var c=getActiveClient();if(typeof targetPI==="string"){var _pi=resolvePhaseIdx(c
   if(srcPAI<targetPAI)newIdx--;
   c.phases[targetPI].packages.splice(newIdx,0,pkg);
   rebuildStates(c);
-  save();renderAll();toast('Kategorie verschoben');
+  Bus.emit('data:changed');toast('Kategorie verschoben');
   dragPkg=null;
 }
 
@@ -817,7 +817,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   inp.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0';
   document.body.appendChild(inp);
   inp.addEventListener('change',()=>{
-    if(inp.value){task.customDeadline=inp.value;save();renderAll();toast('Deadline gesetzt')}
+    if(inp.value){task.customDeadline=inp.value;Bus.emit('data:changed');toast('Deadline gesetzt')}
     inp.remove();
   });
   inp.addEventListener('blur',()=>setTimeout(()=>inp.remove(),200));
@@ -827,13 +827,13 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
 function cycle(id){
-  pushUndo('Status geändert');const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+  pushUndo('Status geändert');const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;Bus.emit('data:changed');logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
   pushUndo('Status ge\u00e4ndert');
 function setSt(id,v){
-  pushUndo('Status gesetzt');var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
+  pushUndo('Status gesetzt');var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;Bus.emit('data:changed');logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
   pushUndo('Status gesetzt');
 function setOwner(pi,pai,ti,sel){
-  pushUndo('Owner geändert');const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
+  pushUndo('Owner geändert');const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;Bus.emit('data:changed');}
   pushUndo('Owner ge\u00e4ndert');
 if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
 
@@ -984,7 +984,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   const url=prompt(`${label} für "${task.t}":`,current);
   if(url===null)return;
   task.links[type]=url.trim();
-  save();renderAll();
+  Bus.emit('data:changed');
   toast(url.trim()?`${label} gespeichert`:`${label} entfernt`);
 }
 
@@ -997,7 +997,7 @@ if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.
   const v=prompt('Zeitbudget (Minuten):',cur);
   if(v===null)return;
   task.min=Math.max(5,parseInt(v)||30);
-  save();renderAll();
+  Bus.emit('data:changed');
   toast('Zeitbudget: '+task.min+' Min');
 }
 function openGCal(pi,pai,ti){
@@ -1100,7 +1100,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   c.phases.splice(pi+1,0,clone);
   renumberPhases(c);
   rebuildStates(c);
-  save();renderAll();
+  Bus.emit('data:changed');
   toast('Phase dupliziert');
 }
 function deletePhaseInline(pi){
@@ -1113,7 +1113,7 @@ if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   renumberPhases(c);
   rebuildStates(c);
   openPhases.delete(pi);
-  save();renderAll();
+  Bus.emit('data:changed');
   toast('Phase gelöscht');
 }
 
@@ -1137,7 +1137,7 @@ function ctxDuplicate(){
   if(!ctxData)return;
   const c=getActiveClient(),t=c.phases[ctxData.pi].packages[ctxData.pai].tasks[ctxData.ti];
   c.phases[ctxData.pi].packages[ctxData.pai].tasks.splice(ctxData.ti+1,0,JSON.parse(JSON.stringify(t)));
-  save();renderAll();toast('Dupliziert');ctxHide();
+  Bus.emit('data:changed');toast('Dupliziert');ctxHide();
 }
 function ctxCal(){
   if(!ctxData)return;
@@ -1153,7 +1153,7 @@ function ctxDelete(){
   if(!ctxData)return;
   if(!confirm('Task löschen?'))return;
   getActiveClient().phases[ctxData.pi].packages[ctxData.pai].tasks.splice(ctxData.ti,1);
-  rebuildStates(getActiveClient());save();renderAll();toast('Gelöscht');ctxHide();
+  rebuildStates(getActiveClient());Bus.emit('data:changed');toast('Gelöscht');ctxHide();
 }
 document.addEventListener('click',ctxHide);
 
@@ -1394,7 +1394,7 @@ function editJFLink(){
   const cur=c.jourfix.meetLink||'';
   const v=prompt('Meeting-Link:',cur);
   if(v===null)return;
-  c.jourfix.meetLink=v.trim();save();renderDocs();
+  c.jourfix.meetLink=v.trim();Bus.emit('docs:changed');
   toast(v.trim()?'Meeting-Link gespeichert':'Meeting-Link entfernt');
 }
 function removeJourfix(btn){
@@ -1426,7 +1426,7 @@ function toggleTimer(taskId,evt){
     }
     c.activeTimer=null;
     if(timerInterval){clearInterval(timerInterval);timerInterval=null}
-    save();renderTasks();applyFilters();
+    Bus.emit('tasks:changed');applyFilters();
     toast(`Timer gestoppt: ${elapsed}m erfasst`);
     logActivity("timer_stop",{task:taskId,duration:elapsed+"m"});
   }else{
@@ -1452,7 +1452,7 @@ function toggleTimer(taskId,evt){
         else{const s=document.createElement('span');s.className='tracked';s.textContent=`${tracked+el}m`;btn.appendChild(s)}
       }
     },15000);
-    save();renderTasks();applyFilters();
+    Bus.emit('tasks:changed');applyFilters();
     toast('Timer läuft');
   }
 }
@@ -1465,7 +1465,7 @@ function addManualTime(taskId){
   const mins=parseInt(val);
   if(isNaN(mins)||mins<=0)return toast('Ungültige Eingabe');
   c.timeLog.push({taskId,start:Date.now(),end:Date.now(),mins,manual:true});
-  save();renderTasks();applyFilters();
+  Bus.emit('tasks:changed');applyFilters();
   toast(`${mins}m manuell erfasst`);
 }
 
@@ -1565,7 +1565,7 @@ function restoreSnapshot(clientIndex, snapshotId) {
   if (!snap) return false;
   createSnapshot(clientIndex, "Backup vor Wiederherstellung");
   var preserved = client._snapshots; Object.assign(client, snap.data); client._snapshots = preserved;
-  save(); renderAll(); return true;
+  Bus.emit('data:changed'); return true;
 }
 function openSnapshotModal() {
   var client = DB.clients.find(function(c){return c.id===DB.activeClient}); var snaps = client._snapshots || [];
@@ -1661,7 +1661,7 @@ function applySelectedChanges() {
       }
     }
   });
-  save(); renderAll(); closeModal("diffModal");
+  Bus.emit('data:changed'); closeModal("diffModal");
   var notifs = generateNotifications(changes, indices);
   if (notifs && notifs.length) { openNotifModal(notifs); }
   else { showToast("✅ " + applied + " Änderungen übernommen"); }
@@ -1833,3 +1833,8 @@ function runSmokeTests(){
   console.warn(summary);
   return {pass:pass,fail:fail,total:pass+fail,results:results,summary:summary};
 }
+
+// === S-1: Event-Bus Subscriptions ===
+Bus.on('data:changed', function() { Bus.emit('data:changed'); });
+Bus.on('tasks:changed', function() { Bus.emit('tasks:changed'); });
+Bus.on('docs:changed', function() { Bus.emit('docs:changed'); });
