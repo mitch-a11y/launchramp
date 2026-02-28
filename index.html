@@ -720,6 +720,7 @@ button,select,input,textarea{font-family:inherit}
 <script>
 var DEBUG=false;
 function dbg(){if(DEBUG)console.log.apply(console,arguments);}
+var currentView='tasks';
 
 
 // ============================================================
@@ -2174,7 +2175,12 @@ try{
   }else{
     dv.classList.remove('active');
     cv.classList.remove('hidden');
-    renderTopbar();renderStats();renderTasks();renderDocs();renderCountdown();renderMiniTimeline();renderFilterDropdowns();applyFilters();
+    renderTopbar();renderStats();renderCountdown();
+if(currentView==='tasks'){renderTasks();renderMiniTimeline();renderFilterDropdowns();applyFilters();}
+else if(currentView==='docs'){renderDocs();}
+else if(currentView==='team'){renderTeam();}
+else if(currentView==='insights'){renderProcessDashboard();renderTimerReport();}
+else if(currentView==='templates'){renderTemplates();}
     var tpl=document.getElementById('templatesView');if(tpl){tpl.style.display='none';tpl.classList.remove('active');}
     var sr=document.getElementById('statsRow');if(sr)sr.style.display='';
     var pb=document.getElementById('progressBar');if(pb)pb.style.display='';
@@ -3128,6 +3134,7 @@ function setView(v,el){
     if(e){e.style.display='none';e.classList.remove('active');}
   });
   var activeId=v+'View';
+currentView=v;
   if(v==='insights') activeId='insightsView';
   var target=document.getElementById(activeId);
   if(target){target.style.display='';target.classList.add('active');}
