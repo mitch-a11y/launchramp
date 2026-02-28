@@ -1034,15 +1034,25 @@ function load(){
   if(DB.activeClient)expandedClients.add(DB.activeClient);
   // Migrate states from index-keys to task.status
   DB.clients.forEach(function(c){c.projects.forEach(function(p){migrateStatesToTasks(p);});});
-  save(); // Persist migrated task.status to localStorage
+  saveNow(); // Persist migrated task.status immediately
   // Phase 2: Async load from Supabase (overrides localStorage if newer)
   loadFromSupabase();
 }
+var _saveTimer=null;
 function save(){
-try{
-localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase()
-}catch(e){console.warn("[save Error]",e);toast("Fehler in save: "+e.message,"error");}
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(function(){
+    _saveTimer=null;
+    try{
+      localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase();
+    }catch(e){console.warn("[Save Error]",e);toast("Fehler in save: "+e.message,"error");}
+  },300);
 }
+function saveNow(){
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
+  try{localStorage.setItem('lr3',JSON.stringify(DB));saveToSupabase();}catch(e){console.warn("[Save Error]",e);}
+}
+window.addEventListener('beforeunload',function(){if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;try{localStorage.setItem('lr3',JSON.stringify(DB));}catch(e){}}});
 
 
 // ============================================================
