@@ -131,7 +131,7 @@ let actAutoCloseTimer = null;
 
 function ensureActor(){
   if(!actUser){
-    const name = prompt("Wer bist du? (Name fÃ¼r Activity Feed)");
+    const name = prompt("Wer bist du? (Name für Activity Feed)");
     if(name && name.trim()){ actUser = name.trim(); localStorage.setItem("lr3_user", actUser); }
     else { actUser = "Anonym"; localStorage.setItem("lr3_user", actUser); }
   }
@@ -185,13 +185,13 @@ async function loadActivities(){
 function renderActivityList(){
   const list = document.getElementById("activityList");
   if(!list) return;
-  if(!actItems.length){ list.innerHTML = '<div class="activity-empty">Keine AktivitÃ¤ten bisher</div>'; return; }
+  if(!actItems.length){ list.innerHTML = '<div class="activity-empty">Keine Aktivitäten bisher</div>'; return; }
   list.innerHTML = actItems.map(function(it){
     const d = new Date(it.created_at);
     const time = d.toLocaleDateString("de-CH",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("de-CH",{hour:"2-digit",minute:"2-digit"});
     const det = it.detail || {};
     let desc = it.action;
-    if(it.action === "status_change") desc = "Status: " + (det.task||"?") + " â " + (det.newStatus||"?");
+    if(it.action === "status_change") desc = "Status: " + (det.task||"?") + " → " + (det.newStatus||"?");
     else if(it.action === "timer_start") desc = "Timer gestartet: " + (det.task||"?");
     else if(it.action === "timer_stop") desc = "Timer gestoppt: " + (det.task||"?") + " (" + (det.duration||"?") + ")";
     else if(it.action === "project_created") desc = "Neues Projekt: " + (det.name||"?");
@@ -263,7 +263,7 @@ async function createTemplate(name,type){
 async function duplicateTemplate(srcId){
   const src=tplCache.find(t=>t.id===srcId);
   if(!src) return;
-  const name=prompt("Name fÃ¼r die Kopie:",src.name+" (Kopie)");
+  const name=prompt("Name für die Kopie:",src.name+" (Kopie)");
   if(!name) return;
   const id=src.type+"_"+Date.now();
   const tpl={id,name,type:src.type,data:JSON.parse(JSON.stringify(src.data)),created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:actUser||"Anonym"};
@@ -282,7 +282,7 @@ async function duplicateTemplate(srcId){
 
 async function deleteTemplate(id){
   const tpl=tplCache.find(t=>t.id===id);
-  if(!tpl||!confirm("Template \""+tpl.name+"\" wirklich lÃ¶schen?")) return;
+  if(!tpl||!confirm("Template \""+tpl.name+"\" wirklich löschen?")) return;
   await fetch(SUPABASE_URL+"/rest/v1/templates?id=eq."+encodeURIComponent(id),{
     method:"DELETE",
     headers:{"apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY}
@@ -301,12 +301,12 @@ async function renderTemplates(){
   if(tplCache.length===0){ await migrateDefaultTemplates(); }
   let h="<div style=\"padding:8px\">";
   h+="<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px\">";
-  h+="<h3 style=\"margin:0;font-size:16px\">ð Template-Verwaltung</h3>";
-  h+="<button class=\"tpl-add-btn\" onclick=\"newTemplateDialog()\" style=\"font-size:13px;padding:6px 14px\">ï¼ Neues Template</button>";
+  h+="<h3 style=\"margin:0;font-size:16px\">📋 Template-Verwaltung</h3>";
+  h+="<button class=\"tpl-add-btn\" onclick=\"newTemplateDialog()\" style=\"font-size:13px;padding:6px 14px\">＋ Neues Template</button>";
   h+="</div>";
   // Template cards grid
   h+="<div class=\"tpl-grid\">";
-  const types={launch:"ð Launch",retainer_category:"ð Retainer",webinar:"ðº Webinar",custom:"â¡ Custom"};
+  const types={launch:"🚀 Launch",retainer_category:"🔄 Retainer",webinar:"📺 Webinar",custom:"⚡ Custom"};
   for(const tpl of tplCache){
     const phases=tpl.data&&tpl.data.phases?tpl.data.phases:[];
     const taskCount=phases.reduce((s,p)=>s+(p.packages||[]).reduce((s2,pk)=>s2+(pk.tasks||[]).length,0),0);
@@ -314,7 +314,7 @@ async function renderTemplates(){
     h+="<div class=\"tpl-card"+(isActive?" active":"")+"\" onclick=\"tplActive='"+tpl.id+"';renderTemplates()\">";
     h+="<h4>"+esc(tpl.name)+"</h4>";
     h+="<div class=\"tpl-type\">"+(types[tpl.type]||tpl.type)+"</div>";
-    h+="<div class=\"tpl-stats\">"+phases.length+" Phasen Â· "+taskCount+" Tasks</div>";
+    h+="<div class=\"tpl-stats\">"+phases.length+" Phasen · "+taskCount+" Tasks</div>";
     h+="</div>";
   }
   h+="</div>";
