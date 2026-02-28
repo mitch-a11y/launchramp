@@ -47,6 +47,8 @@
           <span class="link-count" id="linkCount">0</span>
         </div>
         <div class="link-panel" id="linkPanel"></div>
+    <button class="export-btn" onclick="undo()" title="Rückgängig (Ctrl+Z)" style="position:relative">↩ Undo<span id="undoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
+    <button class="export-btn" onclick="redo()" title="Wiederholen (Ctrl+Y)" style="position:relative">↪ Redo<span id="redoBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:var(--blue);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;align-items:center;justify-content:center">0</span></button>
       <button class="export-btn" onclick="openExportModal()" title="Projektstand exportieren">📋 Export</button>
       <button class="import-btn" onclick="openImportModal()" title="Meeting-Update importieren">📥 Import</button>
       <button class="snapshot-btn" onclick="openSnapshotModal()" title="Versionshistorie">🕐 Verlauf</button>
