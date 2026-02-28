@@ -85,21 +85,21 @@ try {
 // ============================================================
 var DEFAULT_PHASES = [
 {id:'P1',name:'PHASE 1: ONBOARDING & SETUP',color:'#2563eb',startDate:'',endDate:'',packages:[
-{name:'Discovery & VertrÃ¤ge',tasks:[
-{t:'KennenlerngesprÃ¤ch',owner:'Mitch',ki:true,vor:'Lead qualifiziert',auto:'Niedrig',min:45},
-{t:'Roadmap/Proposal erstellen + prÃ¤sentieren',owner:'Mitch',ki:false,vor:'KennenlerngesprÃ¤ch',auto:'Hoch',min:60},
-{t:'StrategiegesprÃ¤ch (Deep Dive)',owner:'Mitch',ki:true,vor:'Proposal angenommen',auto:'Niedrig',min:90},
+{name:'Discovery & Verträge',tasks:[
+{t:'Kennenlerngespräch',owner:'Mitch',ki:true,vor:'Lead qualifiziert',auto:'Niedrig',min:45},
+{t:'Roadmap/Proposal erstellen + präsentieren',owner:'Mitch',ki:false,vor:'Kennenlerngespräch',auto:'Hoch',min:60},
+{t:'Strategiegespräch (Deep Dive)',owner:'Mitch',ki:true,vor:'Proposal angenommen',auto:'Niedrig',min:90},
 {t:'Vertrag + Rechnung + Payment',owner:'Mitch',ki:false,vor:'Zusage',auto:'Hoch',min:20},
 ]},
 {name:'Technischer Kick-off',tasks:[
 {t:'Internes Setup: Channels, Ordner, Board',owner:'Max',ki:false,vor:'Vertrag',auto:'Voll',min:15},
-{t:'ZugÃ¤nge erhalten (Domain, Hosting, Socials, Ads, Tools)',owner:'Max',ki:true,vor:'Kick-off',auto:'Mittel',min:30},
-{t:'CI Assets erhalten + geprÃ¼ft',owner:'Hussein',ki:true,vor:'Kick-off',auto:'Mittel',min:20},
-{t:'Bestehende KanÃ¤le + Analytics Audit',owner:'Max',ki:false,vor:'ZugÃ¤nge',auto:'Mittel',min:30},
+{t:'Zugänge erhalten (Domain, Hosting, Socials, Ads, Tools)',owner:'Max',ki:true,vor:'Kick-off',auto:'Mittel',min:30},
+{t:'CI Assets erhalten + geprüft',owner:'Hussein',ki:true,vor:'Kick-off',auto:'Mittel',min:20},
+{t:'Bestehende Kanäle + Analytics Audit',owner:'Max',ki:false,vor:'Zugänge',auto:'Mittel',min:30},
 ]}]},
 {id:'P2',name:'PHASE 2: STRATEGIE & POSITIONIERUNG',color:'#059669',startDate:'',endDate:'',packages:[
 {name:'Research & Analyse',tasks:[
-{t:'Zielgruppen-Research (Interviews, Daten)',owner:'Mitch',ki:true,vor:'StrategiegesprÃ¤ch',auto:'Hoch',min:120},
+{t:'Zielgruppen-Research (Interviews, Daten)',owner:'Mitch',ki:true,vor:'Strategiegespräch',auto:'Hoch',min:120},
 {t:'Wettbewerber-Analyse (3-5 Competitors)',owner:'Mitch',ki:false,vor:'Zielgruppe definiert',auto:'Hoch',min:60},
 {t:'Markt-/Nischen-Analyse + Differenzierung',owner:'Mitch',ki:false,vor:'Research',auto:'Hoch',min:45},
 ]},
@@ -116,14 +116,14 @@ var DEFAULT_PHASES = [
 {t:'Thank-You-Page Copy â Claude First Draft',owner:'Mitch',ki:false,vor:'LP-Konzept',auto:'Hoch',min:15},
 ]},
 {name:'E-Mail & Automation',tasks:[
-{t:'Willkommens-Sequenz (5-7 Mails) â Claude Draft',owner:'Max',ki:false,vor:'Angebot + TonalitÃ¤t',auto:'Hoch',min:60},
+{t:'Willkommens-Sequenz (5-7 Mails) â Claude Draft',owner:'Max',ki:false,vor:'Angebot + Tonalität',auto:'Hoch',min:60},
 {t:'Webinar-Reminder Mails â Claude Draft',owner:'Max',ki:false,vor:'Webinar-Konzept',auto:'Hoch',min:30},
 {t:'Follow-Up Sequenz â Claude Draft',owner:'Max',ki:false,vor:'Webinar-Flow',auto:'Hoch',min:30},
 {t:'WhatsApp Templates â Claude Draft',owner:'Max',ki:false,vor:'Touchpoints',auto:'Hoch',min:15},
 ]},
 {name:'Ads & Social Copy',tasks:[
 {t:'Ad Copy Varianten (5-10 Hooks) â Claude Draft',owner:'Mitch',ki:false,vor:'ICP + Positionierung',auto:'Hoch',min:45},
-{t:'LinkedIn Posts (10-15) â Claude Draft',owner:'Mitch',ki:false,vor:'TonalitÃ¤t + Themen',auto:'Hoch',min:60},
+{t:'LinkedIn Posts (10-15) â Claude Draft',owner:'Mitch',ki:false,vor:'Tonalität + Themen',auto:'Hoch',min:60},
 {t:'Social Media Captions â Claude Draft',owner:'Tobie',ki:false,vor:'Content-Strategie',auto:'Hoch',min:30},
 ]},
 {name:'VSL & Webinar',tasks:[
@@ -167,7 +167,7 @@ var DEFAULT_PHASES = [
 {t:'Feedback einarbeiten',owner:'Mitch',ki:false,vor:'Training',auto:'Niedrig',min:30},
 ]},
 {name:'Ads',tasks:[
-{t:'Ad Accounts + Zielgruppen einrichten',owner:'Max',ki:false,vor:'ZugÃ¤nge + ICP',auto:'Mittel',min:45},
+{t:'Ad Accounts + Zielgruppen einrichten',owner:'Max',ki:false,vor:'Zugänge + ICP',auto:'Mittel',min:45},
 {t:'Kampagnen aufsetzen',owner:'Max',ki:false,vor:'Creatives + Tracking',auto:'Mittel',min:60},
 {t:'Kampagnen Kunden-Freigabe',owner:'Mitch',ki:true,vor:'Setup',auto:'Niedrig',min:20},
 ]}]},
@@ -184,7 +184,7 @@ var DEFAULT_PHASES = [
 {name:'Instagram (Optional)',tasks:[
 {t:'Instagram Profil optimieren',owner:'Tobie',ki:true,vor:'Content-Strategie',auto:'Mittel',min:30,opt:true},
 {t:'Reels erstellen (5-7 Hooks)',owner:'Tobie',ki:true,vor:'Content-Strategie',auto:'Mittel',min:180,opt:true},
-{t:'Carousel Posts (3 StÃ¼ck)',owner:'Hussein',ki:false,vor:'CI',auto:'Mittel',min:90,opt:true},
+{t:'Carousel Posts (3 Stück)',owner:'Hussein',ki:false,vor:'CI',auto:'Mittel',min:90,opt:true},
 ]}]},
 {id:'P7',name:'PHASE 7: LAUNCH',color:'#dc2626',startDate:'',endDate:'',packages:[
 {name:'Pre-Launch',tasks:[
@@ -214,7 +214,7 @@ var DEFAULT_PHASES = [
 function defaultPhases(){return JSON.parse(JSON.stringify(DEFAULT_PHASES));}
 
 const DOCS=[
-  {id:'positionierung',icon:'ð¯',name:'Positionierung',desc:'USP, Messaging, TonalitÃ¤t',int:false},
+  {id:'positionierung',icon:'ð¯',name:'Positionierung',desc:'USP, Messaging, Tonalität',int:false},
   {id:'angebot',icon:'ð',name:'Angebot',desc:'Offer + Pricing',int:false},
   {id:'zielgruppe',icon:'ð¤',name:'Zielgruppe',desc:'ICP, Personas',int:false},
   {id:'ci',icon:'ð¨',name:'CI / Brand',desc:'Logo, Farben, Fonts',int:false},
@@ -222,7 +222,7 @@ const DOCS=[
   {id:'tracking',icon:'ð',name:'Tracking',desc:'KPIs, Metriken',int:false},
   {id:'gdrive',icon:'ð',name:'Google Drive',desc:'Alle Dateien',int:false},
   {id:'gchat',icon:'ð¬',name:'Google Chat',desc:'Team-Kommunikation',int:false},
-  {id:'vault',icon:'ð',name:'Vault',desc:'PasswÃ¶rter & ZugÃ¤nge',int:false},
+  {id:'vault',icon:'ð',name:'Vault',desc:'Passwörter & Zugänge',int:false},
   {id:'claude',icon:'ð¤',name:'Claude Projekt',desc:'Chat & Transkripte',int:true},
   {id:'prompts',icon:'ð',name:'Prompts',desc:'Prompt Library',int:true},
   {id:'sops',icon:'ð¬',name:'SOPs',desc:'Video-Anleitungen',int:true},
@@ -300,7 +300,7 @@ const RETAINER_CATEGORIES=[
   {id:'coaching',name:'Coaching & Beratung',icon:'ð§ ',phases:[{name:'Beratung',packages:[{name:'Coaching & Support',tasks:[
     {t:'Strategie-Call (monatlich)',owner:'Mitch',ki:true,vor:'-',auto:'Niedrig',min:60},
     {t:'Ad-hoc Beratung & Support',owner:'Mitch',ki:true,vor:'-',auto:'Niedrig',min:60},
-    {t:'Monats-Review & Planung nÃ¤chster Monat',owner:'Mitch',ki:true,vor:'Monatsende',auto:'Niedrig',min:45}
+    {t:'Monats-Review & Planung nächster Monat',owner:'Mitch',ki:true,vor:'Monatsende',auto:'Niedrig',min:45}
   ]}]}]}
 ];
 
@@ -440,7 +440,7 @@ function mergeProjects(localProjects, remoteProjects, baseProjects){
   return merged;
 }
 
-// === S-2: Deep-Merge fÃ¼r Phases/Packages/Tasks ===
+// === S-2: Deep-Merge für Phases/Packages/Tasks ===
 function mergePhases(localPhases, remotePhases, basePhases){
   var baseMap = {}; (basePhases||[]).forEach(function(p){ baseMap[p._id] = p; });
   var localMap = {}; (localPhases||[]).forEach(function(p){ localMap[p._id] = p; });
@@ -598,7 +598,7 @@ async function loadFromSupabase(){
 // ---------- SAVE TO SUPABASE (with merge) ----------
 let saveTimeout=null;
 function getRetainerMonthName(){
-  const months=['Januar','Februar','MÃ¤rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const months=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const d=new Date();
   return'Retainer '+months[d.getMonth()]+' '+d.getFullYear();
 }
