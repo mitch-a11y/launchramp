@@ -458,7 +458,7 @@ function mergePhases(localPhases, remotePhases, basePhases){
     var mp = deepClone(remote);
     if(local && remote && base){
       mp.packages = mergePackages(local.packages||[], remote.packages||[], base.packages||[]);
-      if(local.title !== base.title && remote.title === base.title) mp.title = local.title;
+      if(local.name !== base.name && remote.name === base.name) mp.name = local.name;
     } else if(local && remote){
       mp.packages = mergePackages(local.packages||[], remote.packages||[], []);
     }
@@ -484,7 +484,7 @@ function mergePackages(localPkgs, remotePkgs, basePkgs){
     var mp = deepClone(remote);
     if(local && remote && base){
       mp.tasks = mergeTasks(local.tasks||[], remote.tasks||[], base.tasks||[]);
-      if(local.title !== base.title && remote.title === base.title) mp.title = local.title;
+      if(local.name !== base.name && remote.name === base.name) mp.name = local.name;
     } else if(local && remote){
       mp.tasks = mergeTasks(local.tasks||[], remote.tasks||[], []);
     }
@@ -509,7 +509,7 @@ function mergeTasks(localTasks, remoteTasks, baseTasks){
     if(local && !remote) return;
     var mt = deepClone(remote);
     if(local && remote && base){
-      var fields = ["status","owner","deadline","title","link","scheduledDate","scheduledSlot"];
+      var fields = ["status","owner","t","links","min","vor","auto","ki"];
       for(var fi=0; fi<fields.length; fi++){
         var f = fields[fi];
         if(local[f] !== (base[f]||"") && remote[f] === (base[f]||"")){
@@ -517,7 +517,7 @@ function mergeTasks(localTasks, remoteTasks, baseTasks){
         }
       }
     } else if(local && remote){
-      var fields2 = ["status","owner","deadline","title","link","scheduledDate","scheduledSlot"];
+      var fields2 = ["status","owner","t","links","min","vor","auto","ki"];
       for(var fi2=0; fi2<fields2.length; fi2++){
         var f2 = fields2[fi2];
         if(local[f2] && !remote[f2]) mt[f2] = local[f2];
