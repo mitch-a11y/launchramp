@@ -743,12 +743,14 @@ function migrateStatesToTasks(c){
   if(migrated>0)dbg("Migrated "+migrated+" task statuses from states to task.status");
 }
 function getTaskStatus(c,pi,pai,ti){
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   var t=c.phases[pi].packages[pai].tasks[ti];
   if(t&&t.status)return t.status;
   var key=pi+"-"+pai+"-"+ti;
   return (c.states&&c.states[key])||"Offen";
 }
 function setTaskStatus(c,pi,pai,ti,val){
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   c.phases[pi].packages[pai].tasks[ti].status=val;
 }
 
@@ -2435,8 +2437,16 @@ function getPhaseHealth(phase,pct,done,total){
 
 
 
+
+// M-5: ID-System — resolve _id to array index
+function resolvePhaseIdx(c,phaseId){for(var i=0;i<c.phases.length;i++){if(c.phases[i]._id===phaseId)return i;}return -1;}
+function resolvePkgIdx(phase,pkgId){for(var i=0;i<phase.packages.length;i++){if(phase.packages[i]._id===pkgId)return i;}return -1;}
+function resolveTaskIdx(pkg,taskId){for(var i=0;i<pkg.tasks.length;i++){if(pkg.tasks[i]._id===taskId)return i;}return -1;}
+function resolveTaskById(c,taskId){for(var pi=0;pi<c.phases.length;pi++){var ph=c.phases[pi];for(var pai=0;pai<ph.packages.length;pai++){var pk=ph.packages[pai];for(var ti=0;ti<pk.tasks.length;ti++){if(pk.tasks[ti]._id===taskId)return{pi:pi,pai:pai,ti:ti,task:pk.tasks[ti]};}}}return null;}
+
 // M-2: Extracted from renderTasks() — package header block
 function renderPackageHeaderHtml(pkg,pai,pi,c){
+var phObj=c.phases[pi];
 const wKey=`${pi}_${pai}`;
       const wOpen=openPackages.has(wKey);
       // Package task count
@@ -2444,18 +2454,18 @@ const wKey=`${pi}_${pai}`;
       pkg.tasks.forEach((t,ti)=>{ptt++;if(((t.status||'Offen'))==='Erledigt')pdd++});
       const ppct=ptt?Math.round(pdd/ptt*100):0;
         let pkgPlanMins=0,pkgActualMins=0;
-        pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=`${pi}-${pai}-${ti}`;pkgActualMins+=getTrackedMins(c,tid);});
+        pkg.tasks.forEach((t,ti)=>{pkgPlanMins+=(t.min||30);const tid=t._id;pkgActualMins+=getTrackedMins(c,tid);});
         const pkgTimeHtml=pkgPlanMins>0?`<span class="pkg-time">${pkgActualMins}/${pkgPlanMins}min</span>`:"";;
 
-      return `<div class="wp-wrap" data-pi="${pi}" data-pai="${pai}" draggable="true" ondragstart="dragPkgStart(event,${pi},${pai})" ondragend="dragPkgEnd(event)" ondragover="dragPkgOver(event,${pi},${pai})" ondragleave="dragPkgLeave(event)" ondrop="dropPkg(event,${pi},${pai})">
-      <div class="wp-head" onclick="toggleW(${pi},${pai})">
+      return `<div class="wp-wrap" data-pi="${pi}" data-pai="${pai}" draggable="true" ondragstart="dragPkgStart(event,'${phObj._id}','${pkg._id}')" ondragend="dragPkgEnd(event)" ondragover="dragPkgOver(event,'${phObj._id}','${pkg._id}')" ondragleave="dragPkgLeave(event)" ondrop="dropPkg(event,'${phObj._id}','${pkg._id}')">
+      <div class="wp-head" onclick="toggleW('${phObj._id}','${pkg._id}')">
         <span class="drag-handle" title="Kategorie verschieben" onmousedown="event.stopPropagation()">⠿</span>
         <span class="wp-chev${wOpen?' open':''}" id="wc${pi}_${pai}">▶</span>
         <span class="wp-name">${esc(pkg.name)}</span>${pkgTimeHtml}
         <span style="font-size:10px;color:var(--text3);margin-left:6px">${pdd}/${ptt}</span>
         ${ppct===100?'<span style="font-size:9px;color:var(--green);margin-left:4px">✓</span>':''}
-        <button class="btn sm int-col" style="margin-left:auto;opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();renamePackage(${pi},${pai})">✏️</button>
-        <button class="btn sm int-col danger" style="opacity:0;transition:opacity .15s;font-size:9px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();deletePackage(${pi},${pai})">✕</button>
+        <button class="btn sm int-col" style="margin-left:auto;opacity:0;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();renamePackage('${phObj._id}','${pkg._id}')">✏️</button>
+        <button class="btn sm int-col danger" style="opacity:0;transition:opacity .15s;font-size:9px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation();deletePackage('${phObj._id}','${pkg._id}')">✕</button>
       </div><div class="wp-body${wOpen?' open':''}" id="wb${pi}_${pai}">`;
 }
 
@@ -2465,7 +2475,7 @@ let tt=0,dd=0;
     phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{tt++;if(((t.status||'Offen'))==='Erledigt')dd++}));
     const pct=tt?Math.round(dd/tt*100):0;
       let phasePlanMins=0,phaseActualMins=0;
-      phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{phasePlanMins+=(t.min||30);phaseActualMins+=getTrackedMins(c,`${pi}-${pai}-${ti}`);}));
+      phase.packages.forEach((pk,pai)=>pk.tasks.forEach((t,ti)=>{phasePlanMins+=(t.min||30);phaseActualMins+=getTrackedMins(c,t._id);}));
       const phaseTimeHtml=phasePlanMins>0?`<span class="phase-time">${phaseActualMins}/${phasePlanMins}min</span>`:"";;
     const dateStr=phase.startDate&&phase.endDate?`${fmtShort(phase.startDate)} – ${fmtShort(phase.endDate)}`:'';
     const daysDiff=phase.startDate&&phase.endDate?Math.round((new Date(phase.endDate)-new Date(phase.startDate))/864e5):0;
@@ -2474,8 +2484,8 @@ let tt=0,dd=0;
     // Phase health color: green=on track, orange=behind, red=overdue, blue=future, bright green=done
     const phaseBarInfo=getPhaseHealth(phase,pct,dd,tt);
 
-    return `<div class="phase-block" data-pi="${pi}" draggable="true" ondragstart="dragPhaseStart(event,${pi})" ondragend="dragPhaseEnd(event)" ondragover="dragPhaseOver(event,${pi})" ondragleave="dragPhaseLeave(event)" ondrop="dropPhase(event,${pi})">
-      <div class="phase-head" onclick="toggleP(${pi})" style="border-left:3px solid ${phaseBarInfo.color}">
+    return `<div class="phase-block" data-pi="${pi}" draggable="true" ondragstart="dragPhaseStart(event,'${phase._id}')" ondragend="dragPhaseEnd(event)" ondragover="dragPhaseOver(event,'${phase._id}')" ondragleave="dragPhaseLeave(event)" ondrop="dropPhase(event,'${phase._id}')">
+      <div class="phase-head" onclick="toggleP('${phase._id}')" style="border-left:3px solid ${phaseBarInfo.color}">
         <div class="phase-left">
           <span class="drag-handle" title="Phase verschieben" onmousedown="event.stopPropagation()">⠿</span>
           <span class="ph-chev${pOpen?' open':''}" id="pc${pi}">▶</span>
@@ -2488,11 +2498,11 @@ let tt=0,dd=0;
           <span class="phase-pct" style="color:${phaseBarInfo.color};font-weight:600">${dd}/${tt}</span>
           <div class="mini-bar" style="background:${phaseBarInfo.color}15"><div class="mini-fill" style="width:${pct}%;background:${phaseBarInfo.color}"></div></div>
           <div class="ph-actions" style="display:flex;gap:3px;align-items:center">
-            <button class="btn sm" onclick="event.stopPropagation();openAddPackage(${pi})" style="font-size:10px;opacity:.7">+ Kategorie</button>
-            <button class="btn sm" onclick="event.stopPropagation();openAddTask(${pi},0)" style="font-size:10px;opacity:.7">+ Task</button>
-            <button class="btn sm" onclick="event.stopPropagation();editPhase(${pi})" title="Phase bearbeiten">✏️</button>
-            <button class="btn sm int-col" onclick="event.stopPropagation();duplicatePhase(${pi})" title="Phase duplizieren">📋</button>
-            <button class="btn sm danger int-col" onclick="event.stopPropagation();deletePhaseInline(${pi})" title="Phase löschen" style="font-size:10px">🗑️</button>
+            <button class="btn sm" onclick="event.stopPropagation();openAddPackage('${phase._id}')" style="font-size:10px;opacity:.7">+ Kategorie</button>
+            <button class="btn sm" onclick="event.stopPropagation();openAddTask('${phase._id}',phase.packages.length?phase.packages[0]._id:'')" style="font-size:10px;opacity:.7">+ Task</button>
+            <button class="btn sm" onclick="event.stopPropagation();editPhase('${phase._id}')" title="Phase bearbeiten">✏️</button>
+            <button class="btn sm int-col" onclick="event.stopPropagation();duplicatePhase('${phase._id}')" title="Phase duplizieren">📋</button>
+            <button class="btn sm danger int-col" onclick="event.stopPropagation();deletePhaseInline('${phase._id}')" title="Phase löschen" style="font-size:10px">🗑️</button>
           </div>
         </div>
       </div>
@@ -2501,7 +2511,8 @@ let tt=0,dd=0;
 
 // M-2: Extracted from renderTasks() — single task row HTML
 function renderTaskRowHtml(task,ti,pi,pai,c,phaseTaskDeadlines,flatIdxVal){
-const id=`${pi}-${pai}-${ti}`;
+var phObj=c.phases[pi],pkObj=phObj.packages[pai];
+const id=task._id;
         const st=task.status||'Offen';
         const cc=st==='Erledigt'?'done':st==='In Arbeit'?'wip':st==='Warte auf Kunde'?'wait':'';
         const ci=st==='Erledigt'?'✓':st==='In Arbeit'?'●':st==='Warte auf Kunde'?'◔':'';
@@ -2517,13 +2528,13 @@ const id=`${pi}-${pai}-${ti}`;
           const daysLeft=Math.ceil((dl-now)/864e5);
           const dlStr=dl.toLocaleDateString('de-DE',{day:'numeric',month:'short'});
           if(st==='Erledigt'){
-            dlBadge=`<span class="dl-badge dl-done" onclick="editDeadline(${pi},${pai},${ti},event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
+            dlBadge=`<span class="dl-badge dl-done" onclick="editDeadline('${phObj._id}','${pkObj._id}','${task._id}',event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
           }else if(daysLeft>1){
-            dlBadge=`<span class="dl-badge dl-ok" onclick="editDeadline(${pi},${pai},${ti},event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
+            dlBadge=`<span class="dl-badge dl-ok" onclick="editDeadline('${phObj._id}','${pkObj._id}','${task._id}',event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
           }else if(daysLeft>=0){
-            dlBadge=`<span class="dl-badge dl-warn" onclick="editDeadline(${pi},${pai},${ti},event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
+            dlBadge=`<span class="dl-badge dl-warn" onclick="editDeadline('${phObj._id}','${pkObj._id}','${task._id}',event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr}</span>`;
           }else{
-            dlBadge=`<span class="dl-badge dl-over" onclick="editDeadline(${pi},${pai},${ti},event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr} (${Math.abs(daysLeft)}d über)</span>`;
+            dlBadge=`<span class="dl-badge dl-over" onclick="editDeadline('${phObj._id}','${pkObj._id}','${task._id}',event)" style="cursor:pointer" title="Klick: Deadline ändern">${dlStr} (${Math.abs(daysLeft)}d über)</span>`;
           }
         }}
                 const tracked=getTrackedMins(c,id);
@@ -2532,21 +2543,21 @@ const id=`${pi}-${pai}-${ti}`;
         const planBarHtml=mins>0&&(tracked>0||st==="Erledigt")?`<span class="plan-bar" title="${tracked}/${mins}min (${planPct}%)"><span class="plan-bar-track"><span class="plan-bar-fill ${planCol}" style="width:${Math.min(planPct,100)}%"></span></span><span class="plan-bar-label">${tracked}/${mins}</span></span>`:"";;
         const isTimerOn=c.activeTimer&&c.activeTimer.taskId===id;
         const timerBtn=`<span class="timer-btn${isTimerOn?' running':''}" onclick="toggleTimer('${id}',event)" title="${isTimerOn?'Timer stoppen':'Timer starten'}">${isTimerOn?'⏹':'▶'}${tracked?`<span class="tracked">${tracked}m</span>`:''}</span>`;
-        const timeBtn=`<span class="time-btn" onclick="editTaskTime(${pi},${pai},${ti})" title="Zeitbudget anpassen">⏱ ${mins}m</span>`;
+        const timeBtn=`<span class="time-btn" onclick="editTaskTime('${phObj._id}','${pkObj._id}','${task._id}')" title="Zeitbudget anpassen">⏱ ${mins}m</span>`;
         const sched=task.scheduled;
         const calBtn=sched
-          ?`<span class="cal-btn cal-scheduled" onclick="openGCal(${pi},${pai},${ti})" title="Zeitblock: ${fmtShort(sched.date)} ${sched.time}">📅 ${fmtShort(sched.date)}</span>`
-          :`<span class="cal-btn" onclick="openGCal(${pi},${pai},${ti})" title="Zeitblock planen">📅</span>`;
+          ?`<span class="cal-btn cal-scheduled" onclick="openGCal('${phObj._id}','${pkObj._id}','${task._id}')" title="Zeitblock: ${fmtShort(sched.date)} ${sched.time}">📅 ${fmtShort(sched.date)}</span>`
+          :`<span class="cal-btn" onclick="openGCal('${phObj._id}','${pkObj._id}','${task._id}')" title="Zeitblock planen">📅</span>`;
         const promptBtn=pLink
-          ?`<span class="link-btn has-link" onclick="window.open('${esc(pLink)}','_blank')" title="${esc(pLink)}">📋 Prompt <span class="gear" onclick="event.stopPropagation();editTaskLink(${pi},${pai},${ti},'prompt')">⚙</span></span>`
-          :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'prompt')">📋 Prompt</span>`;
+          ?`<span class="link-btn has-link" onclick="window.open('${esc(pLink)}','_blank')" title="${esc(pLink)}">📋 Prompt <span class="gear" onclick="event.stopPropagation();editTaskLink('${phObj._id}','${pkObj._id}','${task._id}','prompt')">⚙</span></span>`
+          :`<span class="link-btn empty int-col" onclick="editTaskLink('${phObj._id}','${pkObj._id}','${task._id}','prompt')">📋 Prompt</span>`;
         const sopBtn=sLink
-          ?`<span class="link-btn has-link" onclick="window.open('${esc(sLink)}','_blank')" title="${esc(sLink)}">🎬 SOP <span class="gear" onclick="event.stopPropagation();editTaskLink(${pi},${pai},${ti},'sop')">⚙</span></span>`
-          :`<span class="link-btn empty int-col" onclick="editTaskLink(${pi},${pai},${ti},'sop')">🎬 SOP</span>`;
+          ?`<span class="link-btn has-link" onclick="window.open('${esc(sLink)}','_blank')" title="${esc(sLink)}">🎬 SOP <span class="gear" onclick="event.stopPropagation();editTaskLink('${phObj._id}','${pkObj._id}','${task._id}','sop')">⚙</span></span>`
+          :`<span class="link-btn empty int-col" onclick="editTaskLink('${phObj._id}','${pkObj._id}','${task._id}','sop')">🎬 SOP</span>`;
       var noteIcon=task.notes?'<span class="note-icon" title="'+esc(task.notes)+'">📝</span>':'';
-        return `<div class="task-row ${(task.status==='Offen'&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}',${pi},${pai},${ti})">
+        return `<div class="task-row ${(task.status==='Offen'&&getDueClass(task)==='due-overdue')?'overdue-row':''} ${st==='Erledigt'?'done':''}" data-id="${id}" data-owner="${task.owner}" data-status="${st}" oncontextmenu="ctxShow(event,'${id}','${phObj._id}','${pkObj._id}','${task._id}')">
           <div class="tcheck ${cc}" onclick="cycle('${id}')">${ci}</div>
-          <div class="task-text"><span class="txt" onclick="editTask(${pi},${pai},${ti})">${esc(task.t)}${getDueBadge(task)}${noteIcon}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
+          <div class="task-text"><span class="txt" onclick="editTask('${phObj._id}','${pkObj._id}','${task._id}')">${esc(task.t)}${getDueBadge(task)}${noteIcon}</span>${task.ki?'<span class="ki-dot" title="Kunden-Input"></span>':''}</div>
           ${timerBtn}
           ${planBarHtml}
           ${timeBtn}
@@ -2554,9 +2565,9 @@ const id=`${pi}-${pai}-${ti}`;
           ${promptBtn}
           ${sopBtn}
           <div><select class="ssel" onchange="setSt('${id}',this.value)"><option ${st==='Offen'?'selected':''}>Offen</option><option ${st==='In Arbeit'?'selected':''}>In Arbeit</option><option ${st==='Warte auf Kunde'?'selected':''}>Warte auf Kunde</option><option ${st==='Review'?'selected':''}>Review</option><option ${st==='Erledigt'?'selected':''}>Erledigt</option></select></div>
-          <select class="opill opill-${task.owner.toLowerCase()}" onchange="setOwner(${pi},${pai},${ti},this)">${['Mitch','Max','Hussein','Tobie','Team','Kunde'].map(o=>`<option${task.owner===o?' selected':''}>${o}</option>`).join('')}</select>
+          <select class="opill opill-${task.owner.toLowerCase()}" onchange="setOwner('${phObj._id}','${pkObj._id}','${task._id}',this)">${['Mitch','Max','Hussein','Tobie','Team','Kunde'].map(o=>`<option${task.owner===o?' selected':''}>${o}</option>`).join('')}</select>
           ${dlBadge}
-          <div class="task-actions int-col"><button class="task-action" onclick="editTask(${pi},${pai},${ti})" title="Bearbeiten">✏️</button></div>
+          <div class="task-actions int-col"><button class="task-action" onclick="editTask('${phObj._id}','${pkObj._id}','${task._id}')" title="Bearbeiten">✏️</button></div>
         </div>`;
 }
 
@@ -2585,10 +2596,10 @@ function renderTasks(){
       let flatIdx=(function(){let n=0;for(let x=0;x<pai;x++)n+=phase.packages[x].tasks.length;return n})();
 
       pkg.tasks.forEach(function(task,ti){ h+=renderTaskRowHtml(task,ti,pi,pai,c,phaseTaskDeadlines,flatIdx); flatIdx++; });
-      h+=`<div class="add-row"><button class="add-btn" onclick="openAddTask(${pi},${pai})">+ Aufgabe</button></div></div></div>`;
+      h+=`<div class="add-row"><button class="add-btn" onclick="openAddTask('${phase._id}','${pkg._id}')">+ Aufgabe</button></div></div></div>`;
     });
     // Add category button within phase
-    h+=`<div class="add-row" style="margin-top:4px;margin-bottom:6px"><button class="add-btn" onclick="openAddPackage(${pi})" style="font-size:11px">+ Neue Kategorie</button></div>`;
+    h+=`<div class="add-row" style="margin-top:4px;margin-bottom:6px"><button class="add-btn" onclick="openAddPackage('${phase._id}')" style="font-size:11px">+ Neue Kategorie</button></div>`;
     h+=`</div></div>`;
   });
   h+=`<div style="text-align:center;margin:12px 0 8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -2600,11 +2611,13 @@ function renderTasks(){
 }
 
 function toggleP(pi){
+var c=getActiveClient();if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   if(openPhases.has(pi))openPhases.delete(pi);else openPhases.add(pi);
   document.getElementById(`pb${pi}`).classList.toggle('open');
   document.getElementById(`pc${pi}`).classList.toggle('open');
 }
 function toggleW(pi,pai){
+var c=getActiveClient();if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   const k=`${pi}_${pai}`;
   if(openPackages.has(k))openPackages.delete(k);else openPackages.add(k);
   document.getElementById(`wb${pi}_${pai}`).classList.toggle('open');
@@ -2616,6 +2629,7 @@ function openAddPackage(pi){
   const name=prompt('Name der neuen Kategorie:');
   if(!name||!name.trim())return;
   const c=getActiveClient();
+if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   c.phases[pi].packages.push({name:name.trim(),tasks:[]});
   save();renderAll();toast('Kategorie hinzugefügt');
   // Auto-open the phase and new package
@@ -2626,6 +2640,7 @@ function openAddPackage(pi){
 }
 function renamePackage(pi,pai){
   const c=getActiveClient();
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   const name=prompt('Kategorie umbenennen:',c.phases[pi].packages[pai].name);
   if(!name||!name.trim())return;
   c.phases[pi].packages[pai].name=name.trim();
@@ -2634,6 +2649,7 @@ function renamePackage(pi,pai){
 function deletePackage(pi,pai){
   if(!confirm('Kategorie und alle enthaltenen Aufgaben löschen?'))return;
   getActiveClient().phases[pi].packages.splice(pai,1);
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   rebuildStates(getActiveClient());save();renderAll();toast('Kategorie gelöscht');
 }
 
@@ -2641,9 +2657,11 @@ function deletePackage(pi,pai){
 // DRAG & DROP: PHASES
 // ============================================================
 let dragPI=null;
-function dragPhaseStart(e,pi){dragPI=pi;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','phase-'+pi);e.currentTarget.classList.add('dragging')}
+function dragPhaseStart(e,pi){
+if(typeof pi==="string"){pi=resolvePhaseIdx(getActiveClient(),pi);}dragPI=pi;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','phase-'+pi);e.currentTarget.classList.add('dragging')}
 function dragPhaseEnd(e){dragPI=null;e.currentTarget.classList.remove('dragging');document.querySelectorAll('.phase-block').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bot')})}
 function dragPhaseOver(e,pi){
+if(typeof pi==="string"){pi=resolvePhaseIdx(getActiveClient(),pi);}
   if(dragPI===null||dragPI===pi)return;
   e.preventDefault();e.dataTransfer.dropEffect='move';
   const el=e.currentTarget,r=el.getBoundingClientRect(),mid=r.top+r.height/2;
@@ -2653,6 +2671,7 @@ function dragPhaseOver(e,pi){
 function dragPhaseLeave(e){e.currentTarget.classList.remove('drag-over-top','drag-over-bot')}
 function dropPhase(e,targetPI){
   e.preventDefault();
+if(typeof targetPI==="string"){targetPI=resolvePhaseIdx(getActiveClient(),targetPI);}
   if(dragPI===null||dragPI===targetPI)return;
   const c=getActiveClient();
   const el=e.currentTarget,r=el.getBoundingClientRect(),mid=r.top+r.height/2;
@@ -2678,11 +2697,13 @@ function dropPhase(e,targetPI){
 // ============================================================
 let dragPkg=null;
 function dragPkgStart(e,pi,pai){
+if(typeof pi==="string"){var c=getActiveClient();var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   e.stopPropagation(); // Prevent phase drag
   dragPkg={pi,pai};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','pkg-'+pi+'-'+pai);e.currentTarget.classList.add('dragging');
 }
 function dragPkgEnd(e){dragPkg=null;e.currentTarget.classList.remove('dragging');document.querySelectorAll('.wp-wrap').forEach(el=>{el.classList.remove('drag-over-top','drag-over-bot')})}
 function dragPkgOver(e,pi,pai){
+if(typeof pi==="string"){var c=getActiveClient();var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   if(!dragPkg||dragPkg.pi!==pi||(dragPkg.pi===pi&&dragPkg.pai===pai))return;
   e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='move';
   const el=e.currentTarget,r=el.getBoundingClientRect(),mid=r.top+r.height/2;
@@ -2691,9 +2712,10 @@ function dragPkgOver(e,pi,pai){
 }
 function dragPkgLeave(e){e.currentTarget.classList.remove('drag-over-top','drag-over-bot')}
 function dropPkg(e,targetPI,targetPAI){
-  e.preventDefault();e.stopPropagation();
+  e.preventDefault();
+var c=getActiveClient();if(typeof targetPI==="string"){var _pi=resolvePhaseIdx(c,targetPI);targetPAI=resolvePkgIdx(c.phases[_pi],targetPAI);targetPI=_pi;}e.stopPropagation();
   if(!dragPkg||dragPkg.pi!==targetPI||(dragPkg.pi===targetPI&&dragPkg.pai===targetPAI))return;
-  const c=getActiveClient();
+  
   const el=e.currentTarget,r=el.getBoundingClientRect(),mid=r.top+r.height/2;
   const insertBefore=e.clientY<mid;
   const srcPAI=dragPkg.pai;
@@ -2737,6 +2759,7 @@ function autoRecalcAfterReorder(c){
 // ============================================================
 function editDeadline(pi,pai,ti,evt){
   const c=getActiveClient();const task=c.phases[pi].packages[pai].tasks[ti];
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const phase=c.phases[pi];
   // Compute auto-deadline if no custom one set
   if(!task.customDeadline&&phase.startDate&&phase.endDate){
@@ -2764,15 +2787,17 @@ function editDeadline(pi,pai,ti,evt){
 }
 
 const SC=['Offen','In Arbeit','Warte auf Kunde','Erledigt'];
-function cycle(id){const c=getActiveClient();var parts=id.split("-");var task=c.phases[parts[0]].packages[parts[1]].tasks[parts[2]];var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[id]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
-function setSt(id,v){var c=getActiveClient();var parts=id.split("-");var task=c.phases[parts[0]].packages[parts[1]].tasks[parts[2]];var old=task.status||"Offen";task.status=v;if(c.states)c.states[id]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
+function cycle(id){const c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("cycle: task not found",id);return;}var task=r.task;var cur=task.status||"Offen";const nxt=SC[(SC.indexOf(cur)+1)%SC.length];task.status=nxt;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=nxt;save();renderAll();logActivity("status_change",{task:id,oldStatus:cur,newStatus:nxt})}
+function setSt(id,v){var c=getActiveClient();var r=resolveTaskById(c,id);if(!r){dbg("setSt: task not found",id);return;}var task=r.task;var old=task.status||"Offen";task.status=v;if(c.states)c.states[r.pi+"-"+r.pai+"-"+r.ti]=v;save();renderAll();logActivity("status_change",{task:id,oldStatus:old,newStatus:v})}
 function setOwner(pi,pai,ti,sel){const c=getActiveClient();c.phases[pi].packages[pai].tasks[ti].owner=sel.value;save();renderAll()}
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
 
 // ============================================================
 // TASK MODAL (Add / Edit)
 // ============================================================
 let taskCtx=null;
 function openAddTask(pi,pai){
+var c=getActiveClient();if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);pai=resolvePkgIdx(c.phases[_pi],pai);pi=_pi;}
   taskCtx={mode:'add',pi,pai};
   document.getElementById('tmTitle').textContent='Neue Aufgabe';
   document.getElementById('tmName').value='';
@@ -2788,6 +2813,7 @@ function openAddTask(pi,pai){
 }
 function editTask(pi,pai,ti){
   const task=getActiveClient().phases[pi].packages[pai].tasks[ti];
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   taskCtx={mode:'edit',pi,pai,ti};
   document.getElementById('tmTitle').textContent='Aufgabe bearbeiten';
   document.getElementById('tmName').value=task.t;
@@ -2866,6 +2892,7 @@ function openNewPhase(){
 }
 function editPhase(pi){
   const p=getActiveClient().phases[pi];
+if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   phaseCtx={mode:'edit',pi};
   document.getElementById('pmTitle').textContent='Phase bearbeiten';
   document.getElementById('pmName').value=p.name.replace(/^PHASE \d+:\s*/i,'');
@@ -2913,6 +2940,7 @@ function deletePhase(){
 
 function editTaskLink(pi,pai,ti,type){
   const c=getActiveClient();
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const task=c.phases[pi].packages[pai].tasks[ti];
   if(!task.links)task.links={};
   const label=type==='prompt'?'Prompt-Link':'SOP/Video-Link';
@@ -2926,6 +2954,7 @@ function editTaskLink(pi,pai,ti,type){
 
 function editTaskTime(pi,pai,ti){
   const c=getActiveClient();
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const task=c.phases[pi].packages[pai].tasks[ti];
   const cur=task.min||30;
   const v=prompt('Zeitbudget (Minuten):',cur);
@@ -2936,6 +2965,7 @@ function editTaskTime(pi,pai,ti){
 }
 function openGCal(pi,pai,ti){
   const c=getActiveClient();
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const task=c.phases[pi].packages[pai].tasks[ti];
   const mins=task.min||30;
   const scheduled=task.scheduled||null;
@@ -2985,6 +3015,7 @@ function openGCal(pi,pai,ti){
 }
 function confirmZeitblock(pi,pai,ti,btn){
   const c=getActiveClient();const task=c.phases[pi].packages[pai].tasks[ti];
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   const date=document.getElementById('zbDate').value;
   const time=document.getElementById('zbTime').value||'09:00';
   const mins=parseInt(document.getElementById('zbMins').value)||task.min||30;
@@ -3006,11 +3037,13 @@ function confirmZeitblock(pi,pai,ti,btn){
 }
 function removeScheduled(pi,pai,ti,btn){
   const c=getActiveClient();delete c.phases[pi].packages[pai].tasks[ti].scheduled;
+if(typeof pi==="string"){var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   save();btn.closest('.modal-overlay').remove();renderAll();toast('Zeitblock entfernt');
 }
 
 function duplicatePhase(pi){
   const c=getActiveClient();
+if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   const orig=c.phases[pi];
   const clone=JSON.parse(JSON.stringify(orig));
   // Extract descriptive name
@@ -3032,6 +3065,7 @@ function duplicatePhase(pi){
 }
 function deletePhaseInline(pi){
   const c=getActiveClient();
+if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}
   const phaseName=c.phases[pi]?c.phases[pi].name:'Phase';
   if(!confirm(`"${phaseName}" und alle zugehörigen Tasks löschen?`))return;
   c.phases.splice(pi,1);
@@ -3047,6 +3081,7 @@ function deletePhaseInline(pi){
 // ============================================================
 let ctxData=null;
 function ctxShow(e,id,pi,pai,ti){
+if(typeof pi==="string"){var c=getActiveClient();var _pi=resolvePhaseIdx(c,pi);var _pai=resolvePkgIdx(c.phases[_pi],pai);ti=resolveTaskIdx(c.phases[_pi].packages[_pai],ti);pai=_pai;pi=_pi;}
   e.preventDefault();
   ctxData={id,pi,pai,ti};
   const m=document.getElementById('ctxMenu');
@@ -3130,7 +3165,8 @@ function renderMiniTimeline(){
     </div>`;
 }
 
-function phasePct(c,pi){let t=0,d=0;c.phases[pi].packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++}));return t?Math.round(d/t*100):0}
+function phasePct(c,pi){
+if(typeof pi==="string"){pi=resolvePhaseIdx(c,pi);}let t=0,d=0;c.phases[pi].packages.forEach((pk,pai)=>pk.tasks.forEach((task,ti)=>{t++;if(((task.status||'Offen'))==='Erledigt')d++}));return t?Math.round(d/t*100):0}
 
 // ============================================================
 // DOCS VIEW
