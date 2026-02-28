@@ -1,6 +1,7 @@
 function load(){
   // Phase 1: Load from localStorage for instant display
   try{DB=JSON.parse(localStorage.getItem('lr3')||'null')||{clients:[],activeClient:null,activeProject:null}}catch(e){DB={clients:[],activeClient:null,activeProject:null}}
+  try{lastKnownRemote=JSON.parse(localStorage.getItem("lr3_baseline"));}catch(ebl){lastKnownRemote=null;} // S-2: restore baseline
   // Run all existing migrations (keep original migration logic)
   if(DB.clients.length&&!DB.clients[0].projects){
     DB.clients.forEach(c=>{
@@ -71,6 +72,11 @@ function saveToSupabase(){
     try{
       const localPayload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
 
+      // S-2 Fix 3: Safety-fetch if no baseline exists
+      if(!lastKnownRemote){
+        var{data:_initRemote}=await sbClient.from("app_state").select("data").eq("id","main").single();
+        if(_initRemote&&_initRemote.data){lastKnownRemote=deepClone(_initRemote.data);try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){}}
+      }
       if(lastKnownRemote){
         // Fetch current remote state
         const{data:currentRemote,error:fetchErr}=await sbClient.from('app_state').select('data').eq('id','main').single();
@@ -99,6 +105,7 @@ function saveToSupabase(){
         updateSyncStatus('synced');
         lastRemoteUpdate=new Date().toISOString();
         lastKnownRemote=deepClone(localPayload);
+      try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
       }
     }catch(e){console.warn('[Supabase] Save failed:',e);updateSyncStatus('error')}
     syncInProgress=false;
@@ -111,6 +118,7 @@ async function saveToSupabaseDirect(){
   const payload={clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject};
   await sbClient.from('app_state').upsert({id:'main',data:payload,updated_by:navigator.userAgent.substring(0,50)});
   lastKnownRemote=deepClone(payload);
+  try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
 }
 
 // ===== M3: ACTIVITY FEED =====
@@ -339,6 +347,7 @@ function setupRealtimeSubscription(){
         DB.clients=newData.clients||[];
       }
       lastKnownRemote=deepClone({clients:DB.clients,activeClient:DB.activeClient,activeProject:DB.activeProject});
+      try{localStorage.setItem("lr3_baseline",JSON.stringify(lastKnownRemote));}catch(ebl){} // S-2
       localStorage.setItem('lr3',JSON.stringify(DB));
       renderAll();
       toast('Daten von Teamkollege aktualisiert');
