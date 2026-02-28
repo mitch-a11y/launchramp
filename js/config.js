@@ -5,7 +5,7 @@ var currentView='tasks';
 
 var _undoStack = [];
 var _redoStack = [];
-var MAX_UNDO = 30;// === STATUS MIGRATION: Index-Keys → task.status ===
+var MAX_UNDO = 30;// === STATUS MIGRATION: Index-Keys â task.status ===
 
 // === S-1: Event-Bus ===
 var Bus = {
@@ -85,21 +85,21 @@ try {
 // ============================================================
 var DEFAULT_PHASES = [
 {id:'P1',name:'PHASE 1: ONBOARDING & SETUP',color:'#2563eb',startDate:'',endDate:'',packages:[
-{name:'Discovery & Verträge',tasks:[
-{t:'Kennenlerngespräch',owner:'Mitch',ki:true,vor:'Lead qualifiziert',auto:'Niedrig',min:45},
-{t:'Roadmap/Proposal erstellen + präsentieren',owner:'Mitch',ki:false,vor:'Kennenlerngespräch',auto:'Hoch',min:60},
-{t:'Strategiegespräch (Deep Dive)',owner:'Mitch',ki:true,vor:'Proposal angenommen',auto:'Niedrig',min:90},
+{name:'Discovery & VertrÃ¤ge',tasks:[
+{t:'KennenlerngesprÃ¤ch',owner:'Mitch',ki:true,vor:'Lead qualifiziert',auto:'Niedrig',min:45},
+{t:'Roadmap/Proposal erstellen + prÃ¤sentieren',owner:'Mitch',ki:false,vor:'KennenlerngesprÃ¤ch',auto:'Hoch',min:60},
+{t:'StrategiegesprÃ¤ch (Deep Dive)',owner:'Mitch',ki:true,vor:'Proposal angenommen',auto:'Niedrig',min:90},
 {t:'Vertrag + Rechnung + Payment',owner:'Mitch',ki:false,vor:'Zusage',auto:'Hoch',min:20},
 ]},
 {name:'Technischer Kick-off',tasks:[
 {t:'Internes Setup: Channels, Ordner, Board',owner:'Max',ki:false,vor:'Vertrag',auto:'Voll',min:15},
-{t:'Zugänge erhalten (Domain, Hosting, Socials, Ads, Tools)',owner:'Max',ki:true,vor:'Kick-off',auto:'Mittel',min:30},
-{t:'CI Assets erhalten + geprüft',owner:'Hussein',ki:true,vor:'Kick-off',auto:'Mittel',min:20},
-{t:'Bestehende Kanäle + Analytics Audit',owner:'Max',ki:false,vor:'Zugänge',auto:'Mittel',min:30},
+{t:'ZugÃ¤nge erhalten (Domain, Hosting, Socials, Ads, Tools)',owner:'Max',ki:true,vor:'Kick-off',auto:'Mittel',min:30},
+{t:'CI Assets erhalten + geprÃ¼ft',owner:'Hussein',ki:true,vor:'Kick-off',auto:'Mittel',min:20},
+{t:'Bestehende KanÃ¤le + Analytics Audit',owner:'Max',ki:false,vor:'ZugÃ¤nge',auto:'Mittel',min:30},
 ]}]},
 {id:'P2',name:'PHASE 2: STRATEGIE & POSITIONIERUNG',color:'#059669',startDate:'',endDate:'',packages:[
 {name:'Research & Analyse',tasks:[
-{t:'Zielgruppen-Research (Interviews, Daten)',owner:'Mitch',ki:true,vor:'Strategiegespräch',auto:'Hoch',min:120},
+{t:'Zielgruppen-Research (Interviews, Daten)',owner:'Mitch',ki:true,vor:'StrategiegesprÃ¤ch',auto:'Hoch',min:120},
 {t:'Wettbewerber-Analyse (3-5 Competitors)',owner:'Mitch',ki:false,vor:'Zielgruppe definiert',auto:'Hoch',min:60},
 {t:'Markt-/Nischen-Analyse + Differenzierung',owner:'Mitch',ki:false,vor:'Research',auto:'Hoch',min:45},
 ]},
@@ -111,25 +111,25 @@ var DEFAULT_PHASES = [
 ]}]},
 {id:'P3',name:'PHASE 3: CLAUDE FIRST DRAFTS (BATCH)',color:'#d97706',startDate:'',endDate:'',packages:[
 {name:'Landing Page & Angebotsseite',tasks:[
-{t:'Landing Page Copy – Claude First Draft',owner:'Mitch',ki:false,vor:'Positionierung + ICP',auto:'Hoch',min:45},
-{t:'Angebotsseite Copy – Claude First Draft',owner:'Mitch',ki:false,vor:'Produkttreppe',auto:'Hoch',min:45},
-{t:'Thank-You-Page Copy – Claude First Draft',owner:'Mitch',ki:false,vor:'LP-Konzept',auto:'Hoch',min:15},
+{t:'Landing Page Copy â Claude First Draft',owner:'Mitch',ki:false,vor:'Positionierung + ICP',auto:'Hoch',min:45},
+{t:'Angebotsseite Copy â Claude First Draft',owner:'Mitch',ki:false,vor:'Produkttreppe',auto:'Hoch',min:45},
+{t:'Thank-You-Page Copy â Claude First Draft',owner:'Mitch',ki:false,vor:'LP-Konzept',auto:'Hoch',min:15},
 ]},
 {name:'E-Mail & Automation',tasks:[
-{t:'Willkommens-Sequenz (5-7 Mails) – Claude Draft',owner:'Max',ki:false,vor:'Angebot + Tonalität',auto:'Hoch',min:60},
-{t:'Webinar-Reminder Mails – Claude Draft',owner:'Max',ki:false,vor:'Webinar-Konzept',auto:'Hoch',min:30},
-{t:'Follow-Up Sequenz – Claude Draft',owner:'Max',ki:false,vor:'Webinar-Flow',auto:'Hoch',min:30},
-{t:'WhatsApp Templates – Claude Draft',owner:'Max',ki:false,vor:'Touchpoints',auto:'Hoch',min:15},
+{t:'Willkommens-Sequenz (5-7 Mails) â Claude Draft',owner:'Max',ki:false,vor:'Angebot + TonalitÃ¤t',auto:'Hoch',min:60},
+{t:'Webinar-Reminder Mails â Claude Draft',owner:'Max',ki:false,vor:'Webinar-Konzept',auto:'Hoch',min:30},
+{t:'Follow-Up Sequenz â Claude Draft',owner:'Max',ki:false,vor:'Webinar-Flow',auto:'Hoch',min:30},
+{t:'WhatsApp Templates â Claude Draft',owner:'Max',ki:false,vor:'Touchpoints',auto:'Hoch',min:15},
 ]},
 {name:'Ads & Social Copy',tasks:[
-{t:'Ad Copy Varianten (5-10 Hooks) – Claude Draft',owner:'Mitch',ki:false,vor:'ICP + Positionierung',auto:'Hoch',min:45},
-{t:'LinkedIn Posts (10-15) – Claude Draft',owner:'Mitch',ki:false,vor:'Tonalität + Themen',auto:'Hoch',min:60},
-{t:'Social Media Captions – Claude Draft',owner:'Tobie',ki:false,vor:'Content-Strategie',auto:'Hoch',min:30},
+{t:'Ad Copy Varianten (5-10 Hooks) â Claude Draft',owner:'Mitch',ki:false,vor:'ICP + Positionierung',auto:'Hoch',min:45},
+{t:'LinkedIn Posts (10-15) â Claude Draft',owner:'Mitch',ki:false,vor:'TonalitÃ¤t + Themen',auto:'Hoch',min:60},
+{t:'Social Media Captions â Claude Draft',owner:'Tobie',ki:false,vor:'Content-Strategie',auto:'Hoch',min:30},
 ]},
 {name:'VSL & Webinar',tasks:[
-{t:'VSL Skript – Claude Draft',owner:'Mitch',ki:false,vor:'Angebot + ICP',auto:'Hoch',min:45},
-{t:'Webinar Outline – Claude Draft',owner:'Mitch',ki:false,vor:'Konzept-Call',auto:'Hoch',min:30},
-{t:'Umfrage Fragen – Claude Draft',owner:'Mitch',ki:false,vor:'Zielgruppe',auto:'Hoch',min:15},
+{t:'VSL Skript â Claude Draft',owner:'Mitch',ki:false,vor:'Angebot + ICP',auto:'Hoch',min:45},
+{t:'Webinar Outline â Claude Draft',owner:'Mitch',ki:false,vor:'Konzept-Call',auto:'Hoch',min:30},
+{t:'Umfrage Fragen â Claude Draft',owner:'Mitch',ki:false,vor:'Zielgruppe',auto:'Hoch',min:15},
 ]}]},
 {id:'P4',name:'PHASE 4: DESIGN & BUILD',color:'#dc2626',startDate:'',endDate:'',packages:[
 {name:'Design',tasks:[
@@ -167,7 +167,7 @@ var DEFAULT_PHASES = [
 {t:'Feedback einarbeiten',owner:'Mitch',ki:false,vor:'Training',auto:'Niedrig',min:30},
 ]},
 {name:'Ads',tasks:[
-{t:'Ad Accounts + Zielgruppen einrichten',owner:'Max',ki:false,vor:'Zugänge + ICP',auto:'Mittel',min:45},
+{t:'Ad Accounts + Zielgruppen einrichten',owner:'Max',ki:false,vor:'ZugÃ¤nge + ICP',auto:'Mittel',min:45},
 {t:'Kampagnen aufsetzen',owner:'Max',ki:false,vor:'Creatives + Tracking',auto:'Mittel',min:60},
 {t:'Kampagnen Kunden-Freigabe',owner:'Mitch',ki:true,vor:'Setup',auto:'Niedrig',min:20},
 ]}]},
@@ -184,7 +184,7 @@ var DEFAULT_PHASES = [
 {name:'Instagram (Optional)',tasks:[
 {t:'Instagram Profil optimieren',owner:'Tobie',ki:true,vor:'Content-Strategie',auto:'Mittel',min:30,opt:true},
 {t:'Reels erstellen (5-7 Hooks)',owner:'Tobie',ki:true,vor:'Content-Strategie',auto:'Mittel',min:180,opt:true},
-{t:'Carousel Posts (3 Stück)',owner:'Hussein',ki:false,vor:'CI',auto:'Mittel',min:90,opt:true},
+{t:'Carousel Posts (3 StÃ¼ck)',owner:'Hussein',ki:false,vor:'CI',auto:'Mittel',min:90,opt:true},
 ]}]},
 {id:'P7',name:'PHASE 7: LAUNCH',color:'#dc2626',startDate:'',endDate:'',packages:[
 {name:'Pre-Launch',tasks:[
@@ -214,18 +214,18 @@ var DEFAULT_PHASES = [
 function defaultPhases(){return JSON.parse(JSON.stringify(DEFAULT_PHASES));}
 
 const DOCS=[
-  {id:'positionierung',icon:'🎯',name:'Positionierung',desc:'USP, Messaging, Tonalität',int:false},
-  {id:'angebot',icon:'💎',name:'Angebot',desc:'Offer + Pricing',int:false},
-  {id:'zielgruppe',icon:'👤',name:'Zielgruppe',desc:'ICP, Personas',int:false},
-  {id:'ci',icon:'🎨',name:'CI / Brand',desc:'Logo, Farben, Fonts',int:false},
-  {id:'roadmap',icon:'🗺️',name:'Roadmap',desc:'Kunden-Fahrplan',int:false},
-  {id:'tracking',icon:'📊',name:'Tracking',desc:'KPIs, Metriken',int:false},
-  {id:'gdrive',icon:'📁',name:'Google Drive',desc:'Alle Dateien',int:false},
-  {id:'gchat',icon:'💬',name:'Google Chat',desc:'Team-Kommunikation',int:false},
-  {id:'vault',icon:'🔐',name:'Vault',desc:'Passwörter & Zugänge',int:false},
-  {id:'claude',icon:'🤖',name:'Claude Projekt',desc:'Chat & Transkripte',int:true},
-  {id:'prompts',icon:'📝',name:'Prompts',desc:'Prompt Library',int:true},
-  {id:'sops',icon:'🎬',name:'SOPs',desc:'Video-Anleitungen',int:true},
+  {id:'positionierung',icon:'ð¯',name:'Positionierung',desc:'USP, Messaging, TonalitÃ¤t',int:false},
+  {id:'angebot',icon:'ð',name:'Angebot',desc:'Offer + Pricing',int:false},
+  {id:'zielgruppe',icon:'ð¤',name:'Zielgruppe',desc:'ICP, Personas',int:false},
+  {id:'ci',icon:'ð¨',name:'CI / Brand',desc:'Logo, Farben, Fonts',int:false},
+  {id:'roadmap',icon:'ðºï¸',name:'Roadmap',desc:'Kunden-Fahrplan',int:false},
+  {id:'tracking',icon:'ð',name:'Tracking',desc:'KPIs, Metriken',int:false},
+  {id:'gdrive',icon:'ð',name:'Google Drive',desc:'Alle Dateien',int:false},
+  {id:'gchat',icon:'ð¬',name:'Google Chat',desc:'Team-Kommunikation',int:false},
+  {id:'vault',icon:'ð',name:'Vault',desc:'PasswÃ¶rter & ZugÃ¤nge',int:false},
+  {id:'claude',icon:'ð¤',name:'Claude Projekt',desc:'Chat & Transkripte',int:true},
+  {id:'prompts',icon:'ð',name:'Prompts',desc:'Prompt Library',int:true},
+  {id:'sops',icon:'ð¬',name:'SOPs',desc:'Video-Anleitungen',int:true},
 ];
 
 // ============================================================
@@ -242,65 +242,65 @@ let expandedClients=new Set();
 
 // Retainer categories
 const RETAINER_CATEGORIES=[
-  {id:'linkedin',name:'LinkedIn',icon:'💼',phases:[{name:'LinkedIn Content',packages:[{name:'LinkedIn Management',tasks:[
+  {id:'linkedin',name:'LinkedIn',icon:'ð¼',phases:[{name:'LinkedIn Content',packages:[{name:'LinkedIn Management',tasks:[
     {t:'Content-Strategie & Themenplanung',owner:'Mitch',ki:true,vor:'-',auto:'Hoch',min:60},
     {t:'Posts schreiben (8-12/Monat)',owner:'Tobie',ki:false,vor:'Themenplan',auto:'Hoch',min:120},
     {t:'Profil-Optimierung & Updates',owner:'Tobie',ki:true,vor:'-',auto:'Mittel',min:30},
     {t:'Community Management & Engagement',owner:'Tobie',ki:false,vor:'Posts live',auto:'Mittel',min:60},
     {t:'Performance Report',owner:'Tobie',ki:false,vor:'Monatsende',auto:'Hoch',min:30}
   ]}]}]},
-  {id:'instagram',name:'Instagram',icon:'📸',phases:[{name:'Instagram Content',packages:[{name:'Instagram Management',tasks:[
+  {id:'instagram',name:'Instagram',icon:'ð¸',phases:[{name:'Instagram Content',packages:[{name:'Instagram Management',tasks:[
     {t:'Content-Strategie & Redaktionsplan',owner:'Tobie',ki:true,vor:'-',auto:'Hoch',min:60},
     {t:'Posts & Reels erstellen (8-12/Monat)',owner:'Tobie',ki:false,vor:'Redaktionsplan',auto:'Mittel',min:180},
     {t:'Stories & Community Management',owner:'Tobie',ki:false,vor:'Content live',auto:'Mittel',min:60},
     {t:'Performance Report',owner:'Tobie',ki:false,vor:'Monatsende',auto:'Hoch',min:30}
   ]}]}]},
-  {id:'newsletter',name:'Newsletter',icon:'📧',phases:[{name:'Newsletter',packages:[{name:'E-Mail Marketing',tasks:[
+  {id:'newsletter',name:'Newsletter',icon:'ð§',phases:[{name:'Newsletter',packages:[{name:'E-Mail Marketing',tasks:[
     {t:'Newsletter-Thema & Outline',owner:'Mitch',ki:true,vor:'-',auto:'Hoch',min:30},
     {t:'Newsletter schreiben (2-4/Monat)',owner:'Max',ki:false,vor:'Outline',auto:'Hoch',min:90},
     {t:'Design & Template',owner:'Hussein',ki:false,vor:'Text',auto:'Mittel',min:45},
     {t:'Versand & A/B-Test',owner:'Max',ki:false,vor:'Design',auto:'Mittel',min:20},
     {t:'Performance Report',owner:'Max',ki:false,vor:'Versand',auto:'Hoch',min:15}
   ]}]}]},
-  {id:'blog',name:'Blog / SEO',icon:'✍️',phases:[{name:'Blog & SEO',packages:[{name:'Content & SEO',tasks:[
+  {id:'blog',name:'Blog / SEO',icon:'âï¸',phases:[{name:'Blog & SEO',packages:[{name:'Content & SEO',tasks:[
     {t:'Keyword-Research & Themenplan',owner:'Mitch',ki:true,vor:'-',auto:'Hoch',min:60},
     {t:'Blog-Artikel schreiben (2-4/Monat)',owner:'Max',ki:false,vor:'Keywords',auto:'Hoch',min:120},
     {t:'On-Page SEO Optimierung',owner:'Max',ki:false,vor:'Artikel',auto:'Hoch',min:30},
     {t:'Interne Verlinkung & Updates',owner:'Max',ki:false,vor:'Artikel',auto:'Mittel',min:20},
     {t:'Ranking-Report',owner:'Max',ki:false,vor:'Monatsende',auto:'Hoch',min:15}
   ]}]}]},
-  {id:'ads',name:'Ads Management',icon:'📣',phases:[{name:'Ads',packages:[{name:'Paid Advertising',tasks:[
+  {id:'ads',name:'Ads Management',icon:'ð£',phases:[{name:'Ads',packages:[{name:'Paid Advertising',tasks:[
     {t:'Kampagnen-Review & Optimierung',owner:'Max',ki:false,vor:'-',auto:'Mittel',min:60},
     {t:'Neue Creatives & Copy',owner:'Hussein',ki:false,vor:'Performance-Daten',auto:'Mittel',min:90},
     {t:'Zielgruppen-Tests',owner:'Max',ki:false,vor:'Creatives',auto:'Mittel',min:30},
     {t:'Budget-Optimierung',owner:'Max',ki:false,vor:'Daten',auto:'Mittel',min:20},
     {t:'Performance Report + ROAS',owner:'Max',ki:false,vor:'Monatsende',auto:'Hoch',min:30}
   ]}]}]},
-  {id:'seo',name:'Homepage SEO',icon:'🔍',phases:[{name:'SEO',packages:[{name:'SEO Optimierung',tasks:[
+  {id:'seo',name:'Homepage SEO',icon:'ð',phases:[{name:'SEO',packages:[{name:'SEO Optimierung',tasks:[
     {t:'Technisches SEO Audit',owner:'Max',ki:false,vor:'-',auto:'Hoch',min:60},
     {t:'Meta-Tags & Snippets optimieren',owner:'Max',ki:false,vor:'Audit',auto:'Hoch',min:45},
     {t:'Page Speed Optimierung',owner:'Max',ki:false,vor:'Audit',auto:'Mittel',min:60},
     {t:'Content-Gaps identifizieren',owner:'Mitch',ki:true,vor:'Audit',auto:'Hoch',min:30},
     {t:'Monatlicher SEO Report',owner:'Max',ki:false,vor:'Monatsende',auto:'Hoch',min:20}
   ]}]}]},
-  {id:'youtube',name:'YouTube',icon:'🎬',phases:[{name:'YouTube',packages:[{name:'YouTube Management',tasks:[
+  {id:'youtube',name:'YouTube',icon:'ð¬',phases:[{name:'YouTube',packages:[{name:'YouTube Management',tasks:[
     {t:'Video-Strategie & Themenplan',owner:'Mitch',ki:true,vor:'-',auto:'Hoch',min:60},
     {t:'Skript schreiben (2-4/Monat)',owner:'Mitch',ki:false,vor:'Themenplan',auto:'Hoch',min:90},
     {t:'Video-Produktion & Editing',owner:'Hussein',ki:false,vor:'Skript',auto:'Niedrig',min:240},
     {t:'Thumbnail & SEO',owner:'Hussein',ki:false,vor:'Video',auto:'Mittel',min:30},
     {t:'Upload & Promotion',owner:'Tobie',ki:false,vor:'Video final',auto:'Mittel',min:20}
   ]}]}]},
-  {id:'tiktok',name:'TikTok',icon:'🎵',phases:[{name:'TikTok',packages:[{name:'TikTok Management',tasks:[
+  {id:'tiktok',name:'TikTok',icon:'ðµ',phases:[{name:'TikTok',packages:[{name:'TikTok Management',tasks:[
     {t:'Content-Strategie & Hooks',owner:'Tobie',ki:true,vor:'-',auto:'Hoch',min:45},
     {t:'Videos produzieren (8-15/Monat)',owner:'Tobie',ki:false,vor:'Strategie',auto:'Mittel',min:180},
     {t:'Posting & Hashtag-Strategie',owner:'Tobie',ki:false,vor:'Videos',auto:'Mittel',min:30},
     {t:'Trend-Monitoring & Reaktionen',owner:'Tobie',ki:false,vor:'-',auto:'Mittel',min:30},
     {t:'Performance Report',owner:'Tobie',ki:false,vor:'Monatsende',auto:'Hoch',min:15}
   ]}]}]},
-  {id:'coaching',name:'Coaching & Beratung',icon:'🧠',phases:[{name:'Beratung',packages:[{name:'Coaching & Support',tasks:[
+  {id:'coaching',name:'Coaching & Beratung',icon:'ð§ ',phases:[{name:'Beratung',packages:[{name:'Coaching & Support',tasks:[
     {t:'Strategie-Call (monatlich)',owner:'Mitch',ki:true,vor:'-',auto:'Niedrig',min:60},
     {t:'Ad-hoc Beratung & Support',owner:'Mitch',ki:true,vor:'-',auto:'Niedrig',min:60},
-    {t:'Monats-Review & Planung nächster Monat',owner:'Mitch',ki:true,vor:'Monatsende',auto:'Niedrig',min:45}
+    {t:'Monats-Review & Planung nÃ¤chster Monat',owner:'Mitch',ki:true,vor:'Monatsende',auto:'Niedrig',min:45}
   ]}]}]}
 ];
 
@@ -440,7 +440,7 @@ function mergeProjects(localProjects, remoteProjects, baseProjects){
   return merged;
 }
 
-// === S-2: Deep-Merge für Phases/Packages/Tasks ===
+// === S-2: Deep-Merge fÃ¼r Phases/Packages/Tasks ===
 function mergePhases(localPhases, remotePhases, basePhases){
   var baseMap = {}; (basePhases||[]).forEach(function(p){ baseMap[p._id] = p; });
   var localMap = {}; (localPhases||[]).forEach(function(p){ localMap[p._id] = p; });
@@ -528,6 +528,20 @@ function mergeTasks(localTasks, remoteTasks, baseTasks){
   return merged;
 }
 
+
+// ---------- REPAIR CORRUPT PHASES (Migration M-2) ----------
+function repairCorruptPhases(){
+  DB.clients.forEach(function(c){
+    if(!c.projects) return;
+    c.projects.forEach(function(proj){
+      if(proj.type && proj.type !== "retainer" && proj.type !== "empty" && proj.phases && proj.phases.length < 8){
+        dbg("[M-2] Repairing corrupt phases for project: " + proj.name + " (had " + proj.phases.length + " phases)");
+        proj.phases = defaultPhases();
+      }
+    });
+  });
+}
+
 // ---------- LOAD FROM SUPABASE ----------
 async function loadFromSupabase(){
   if(!sbClient){updateSyncStatus('offline');return}
@@ -559,6 +573,7 @@ async function loadFromSupabase(){
         if(!DB.clients.length){const c=mkClientWithProject('Beispiel-Kunde','launch');DB.clients.push(c);DB.activeClient=c.id;DB.activeProject=c.projects[0].id;}
         // M-1: Migrate states to task.status after Supabase load
       DB.clients.forEach(function(c){c.projects.forEach(function(proj){migrateStatesToTasks(proj);});});
+        repairCorruptPhases(); // M-2: Fix corrupt phases from broken load period
       localStorage.setItem('lr3',JSON.stringify(DB));
         if(DB.activeClient)expandedClients.add(DB.activeClient);
         renderAll();
@@ -583,7 +598,7 @@ async function loadFromSupabase(){
 // ---------- SAVE TO SUPABASE (with merge) ----------
 let saveTimeout=null;
 function getRetainerMonthName(){
-  const months=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const months=['Januar','Februar','MÃ¤rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const d=new Date();
   return'Retainer '+months[d.getMonth()]+' '+d.getFullYear();
 }
@@ -600,15 +615,15 @@ function getPhaseHealth(phase,pct,done,total){
   const now=new Date();now.setHours(0,0,0,0);
   const GREEN='#16a34a',ORANGE='#ea580c',RED='#dc2626',BLUE='#6366f1',DONE_GREEN='#059669';
   // 100% done
-  if(total>0&&done===total)return{color:DONE_GREEN,icon:'✓'};
-  // No dates → use original phase color
+  if(total>0&&done===total)return{color:DONE_GREEN,icon:'â'};
+  // No dates â use original phase color
   if(!phase.startDate||!phase.endDate)return{color:phase.color,icon:''};
   const start=new Date(phase.startDate);start.setHours(0,0,0,0);
   const end=new Date(phase.endDate);end.setHours(0,0,0,0);
   // Future phase
   if(now<start)return{color:BLUE,icon:''};
   // Overdue: past end date with tasks open
-  if(now>end&&done<total)return{color:RED,icon:'⚠️'};
+  if(now>end&&done<total)return{color:RED,icon:'â ï¸'};
   // In progress: compare progress % to time elapsed %
   const totalDays=Math.max((end-start)/864e5,1);
   const elapsed=Math.min((now-start)/864e5,totalDays);
@@ -616,19 +631,19 @@ function getPhaseHealth(phase,pct,done,total){
   // On track or ahead
   if(pct>=timePct-10)return{color:GREEN,icon:''};
   // Behind schedule
-  return{color:ORANGE,icon:'⏳'};
+  return{color:ORANGE,icon:'â³'};
 }
 
 
 
 
-// M-5: ID-System — resolve _id to array index
+// M-5: ID-System â resolve _id to array index
 function resolvePhaseIdx(c,phaseId){for(var i=0;i<c.phases.length;i++){if(c.phases[i]._id===phaseId)return i;}return -1;}
 function resolvePkgIdx(phase,pkgId){for(var i=0;i<phase.packages.length;i++){if(phase.packages[i]._id===pkgId)return i;}return -1;}
 function resolveTaskIdx(pkg,taskId){for(var i=0;i<pkg.tasks.length;i++){if(pkg.tasks[i]._id===taskId)return i;}return -1;}
 function resolveTaskById(c,taskId){for(var pi=0;pi<c.phases.length;pi++){var ph=c.phases[pi];for(var pai=0;pai<ph.packages.length;pai++){var pk=ph.packages[pai];for(var ti=0;ti<pk.tasks.length;ti++){if(pk.tasks[ti]._id===taskId)return{pi:pi,pai:pai,ti:ti,task:pk.tasks[ti]};}}}return null;}
 
-// M-2: Extracted from renderTasks() — package header block
+// M-2: Extracted from renderTasks() â package header block
 function rebuildStates(c){
   var ns={};
   c.phases.forEach(function(p,pi){p.packages.forEach(function(pk,pai){pk.tasks.forEach(function(t,ti){
