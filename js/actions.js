@@ -1627,11 +1627,11 @@ function computeDiff(importData) {
       if (!cp) { changes.push({ type: "new_project", severity: "red", client: cc.name, data: ip }); return; }
       (ip.phases || []).forEach(function(iph) {
         var cph = cp.phases.find(function(ph) { return ph._id === iph._id; });
-        if (!cph) { changes.push({ type: "new_phase", severity: "red", project: cp.name, data: iph }); return; }
+        if (!cph) { changes.push({ type: "new_phase", severity: "red", project: cp.name, data: iph, _projectId: cp._id }); return; }
         if (iph.name !== cph.name) changes.push({ type: "rename_phase", severity: "yellow", phase: cph.name, newName: iph.name, _ref: cph });
         (iph.packages || []).forEach(function(ipk) {
           var cpk = cph.packages.find(function(pk) { return pk._id === ipk._id; });
-          if (!cpk) { changes.push({ type: "new_package", severity: "yellow", phase: cph.name, data: ipk }); return; }
+          if (!cpk) { changes.push({ type: "new_package", severity: "yellow", phase: cph.name, data: ipk, _phaseId: cph._id }); return; }
           (ipk.tasks || []).forEach(function(it) {
             var ct = cpk.tasks.find(function(t) { return t._id === it._id; });
             if (!ct) { changes.push({ type: "new_task", severity: "yellow", phase: cph.name, package: cpk.name, data: it }); return; }
@@ -1646,7 +1646,9 @@ function computeDiff(importData) {
           });
           cpk.tasks.forEach(function(ct) { var still = ipk.tasks.find(function(t) { return t._id === ct._id; }); if (!still) changes.push({ type: "delete_task", severity: "red", task: ct.t, _id: ct._id, phase: cph.name, package: cpk.name }); });
         });
+        cph.packages.forEach(function(cpk) { var still = (iph.packages || []).find(function(pk) { return pk._id === cpk._id; }); if (!still) changes.push({ type: "delete_package", severity: "red", package: cpk.name, _id: cpk._id, phase: cph.name, _phase: cph }); });
       });
+      cp.phases.forEach(function(cph) { var still = (ip.phases || []).find(function(ph) { return ph._id === cph._id; }); if (!still) changes.push({ type: "delete_phase", severity: "red", phase: cph.name, _id: cph._id, _project: cp }); });
     });
   });
   return changes;
@@ -1681,6 +1683,85 @@ function applySelectedChanges() {
           });
         });
       }
+    }
+    else if (c.type === "rename_phase" && c._ref) {
+      c._ref.name = c.newName;
+      applied++;
+    }
+    else if (c.type === "new_package") {
+      var nc = DB.clients.find(function(x) { return x._id === window._pendingImport.data.clients[0]._id; });
+      if (nc) {
+        nc.projects.forEach(function(p) {
+          p.phases.forEach(function(ph) {
+            if (ph._id === c._phaseId || ph.name === c.phase) {
+              var newPk = { _id: genId("pk"), name: c.data.name, tasks: [] };
+              if (c.data.tasks && c.data.tasks.length) {
+                c.data.tasks.forEach(function(t) {
+                  newPk.tasks.push({ _id: genId("ts"), t: t.t || t.name || "", status: t.status || 0, owner: t.owner || "", due: t.due || "", min: t.min || 60, notes: t.notes || "", ki: t.ki || false, vor: t.vor || "", auto: t.auto || false });
+                });
+              }
+              ph.packages.push(newPk);
+              applied++;
+            }
+          });
+        });
+      }
+    }
+    else if (c.type === "new_phase") {
+      var nc2 = DB.clients.find(function(x) { return x._id === window._pendingImport.data.clients[0]._id; });
+      if (nc2) {
+        var proj = nc2.projects.find(function(p) { return p._id === c._projectId; }) || nc2.projects[0];
+        if (proj) {
+          var newPh = { _id: genId("ph"), name: c.data.name, color: c.data.color || "#666", start: c.data.start || "", end: c.data.end || "", packages: [] };
+          if (c.data.packages && c.data.packages.length) {
+            c.data.packages.forEach(function(pk) {
+              var newPk = { _id: genId("pk"), name: pk.name, tasks: [] };
+              (pk.tasks || []).forEach(function(t) {
+                newPk.tasks.push({ _id: genId("ts"), t: t.t || t.name || "", status: t.status || 0, owner: t.owner || "", due: t.due || "", min: t.min || 60, notes: t.notes || "", ki: t.ki || false, vor: t.vor || "", auto: t.auto || false });
+              });
+              newPh.packages.push(newPk);
+            });
+          }
+          proj.phases.push(newPh);
+          applied++;
+        }
+      }
+    }
+    else if (c.type === "delete_task" && c._id) {
+      var found = false;
+      DB.clients.forEach(function(cl) {
+        cl.projects.forEach(function(p) {
+          p.phases.forEach(function(ph) {
+            ph.packages.forEach(function(pk) {
+              var idx = pk.tasks.findIndex(function(t) { return t._id === c._id; });
+              if (idx !== -1) { pk.tasks.splice(idx, 1); found = true; }
+            });
+          });
+        });
+      });
+      if (found) applied++;
+    }
+    else if (c.type === "delete_package" && c._id) {
+      var foundPk = false;
+      DB.clients.forEach(function(cl) {
+        cl.projects.forEach(function(p) {
+          p.phases.forEach(function(ph) {
+            var idx = ph.packages.findIndex(function(pk) { return pk._id === c._id; });
+            if (idx !== -1) { ph.packages.splice(idx, 1); foundPk = true; }
+          });
+        });
+      });
+      if (foundPk) applied++;
+    }
+    else if (c.type === "delete_phase" && c._id) {
+      var foundPh = false;
+      DB.clients.forEach(function(cl) {
+        cl.projects.forEach(function(p) {
+          var idx = p.phases.findIndex(function(ph) { return ph._id === c._id; });
+          if (idx !== -1) { p.phases.splice(idx, 1); foundPh = true; }
+        });
+      });
+      if (foundPh) applied++;
     }
   });
   Bus.emit('data:changed'); closeModal("diffModal");
